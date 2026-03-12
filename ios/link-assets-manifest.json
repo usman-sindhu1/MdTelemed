@@ -1,0 +1,21 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/constants/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf",
+      "sha1": "3a144c924d57b5180ace77735aa10b00742d7362"
+    },
+    {
+      "path": "src/constants/fonts/OpenSans-VariableFont_wdth,wght.ttf",
+      "sha1": "f60d7a8d3e964d894ddf2628508c5bf01e6b6239"
+    },
+    {
+      "path": "src/constants/fonts/Raleway-Italic-VariableFont_wght.ttf",
+      "sha1": "2995b80908669bbea8a9698f2eacebc5edf1df7b"
+    },
+    {
+      "path": "src/constants/fonts/Raleway-VariableFont_wght.ttf",
+      "sha1": "036a6aa66bef92b9927aa75b7d95587c9066a360"
+    }
+  ]
+}

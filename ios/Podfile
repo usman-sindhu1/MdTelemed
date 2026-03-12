@@ -1,0 +1,59 @@
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+# Enable New Architecture (required for react-native-reanimated 4.x)
+ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
+
+# Fix for react-native-reanimated RNWorklets issue
+source 'https://cdn.cocoapods.org/'
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+target 'MdTelemed' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      # :ccache_enabled => true
+    )
+    
+    # Fix for react-native-reanimated with New Architecture
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.4'
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+        config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'RCT_NEW_ARCH_ENABLED=1'
+        
+        # Fix C++ standard for react-native-screens compatibility
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+        
+        # Fix for react-native-screens constexpr issue
+        if target.name == 'RNScreens'
+          config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+          config.build_settings['CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER'] = 'NO'
+        end
+      end
+    end
+  end
+end
