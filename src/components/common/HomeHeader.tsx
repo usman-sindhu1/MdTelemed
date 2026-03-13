@@ -1,133 +1,134 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import {
   View,
+  Text,
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Animated,
-  Dimensions,
+  Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icons from '../../assets/svg';
+import Colors from '../../constants/colors';
+import Fonts from '../../constants/fonts';
+
+const HEADER_BG = '#ECF2FD';
+const ICON_CIRCLE_SIZE = 44;
+const EMOJI_CIRCLE_SIZE = 40;
+const RED_DOT_SIZE = 10;
 
 interface HomeHeaderProps {
-  onMenuPress?: () => void;
-  onSearchPress?: () => void;
+  onProfilePress?: () => void;
   onSearchChange?: (text: string) => void;
+  onAIChatPress?: () => void;
+  onNotificationPress?: () => void;
+  onFeelingPress?: (index: number) => void;
   placeholder?: string;
   value?: string;
+  userName?: string;
+  userAddress?: string;
+  profileImageUri?: string | null;
 }
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({
-  onMenuPress,
-  onSearchPress,
+  onProfilePress,
   onSearchChange,
-  placeholder = '',
-  value,
+  onAIChatPress,
+  onNotificationPress,
+  onFeelingPress,
+  placeholder = 'Search doctor, service',
+  value = '',
+  userName = 'John Doe',
+  userAddress = '1901 Thornridge Cir. Shiloh, Hawaii 81063',
+  profileImageUri,
 }) => {
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [searchText, setSearchText] = useState(value || '');
-  const searchWidth = useRef(new Animated.Value(0)).current;
-  const screenWidth = Dimensions.get('window').width;
-  // Account for: menu button (40) + padding (16) + gap (8) + close icon (40) + gap (8) + padding (16) + extra margin (40) = 168
-  // This ensures the close icon stays within the header and the input is shorter
-  const availableWidth = screenWidth - 168;
-
-  useEffect(() => {
-    if (isSearchActive) {
-      Animated.timing(searchWidth, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    } else {
-      Animated.timing(searchWidth, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [isSearchActive]);
-
-  const handleSearchIconPress = () => {
-    setIsSearchActive(true);
-    if (onSearchPress) {
-      onSearchPress();
-    }
-  };
-
-  const handleSearchChange = (text: string) => {
-    setSearchText(text);
-    if (onSearchChange) {
-      onSearchChange(text);
-    }
-  };
-
-  const handleCloseSearch = () => {
-    setIsSearchActive(false);
-    setSearchText('');
-    if (onSearchChange) {
-      onSearchChange('');
-    }
-  };
-
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.iconButton}
-        onPress={onMenuPress}
-        activeOpacity={0.7}
-      >
-        <Icons.Menu width={24} height={24} />
-      </TouchableOpacity>
-
-      <View style={styles.rightSection}>
-        {!isSearchActive && (
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+      {/* Top row: Profile + Name + Address | AI Chat + Notification */}
+      <View style={styles.topRow}>
+        <TouchableOpacity
+          style={styles.profileSection}
+          onPress={onProfilePress}
+          activeOpacity={onProfilePress ? 0.7 : 1}
+          disabled={!onProfilePress}
+        >
+          <View style={styles.avatarWrapper}>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatar} />
+            ) : (
+              <Text style={styles.avatarPlaceholder}>{userName.charAt(0)}</Text>
+            )}
+          </View>
+          <View style={styles.nameAddressWrap}>
+            <Text style={styles.userName} numberOfLines={1}>{userName}</Text>
+            <View style={styles.addressRow}>
+              <View style={styles.locationIconWrap}>
+                <Icons.LocationIcon width={14} height={14} />
+              </View>
+              <Text style={styles.address} numberOfLines={1}>{userAddress}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.actionIcons}>
           <TouchableOpacity
-            style={styles.iconButton}
-            onPress={handleSearchIconPress}
+            style={styles.iconCircle}
+            onPress={onAIChatPress}
             activeOpacity={0.7}
           >
-            <Icons.Search width={24} height={24} />
+            <Icons.AIChatIcon width={22} height={22} />
+            <View style={styles.redDot} />
           </TouchableOpacity>
-        )}
+          <TouchableOpacity
+            style={styles.iconCircle}
+            onPress={onNotificationPress}
+            activeOpacity={0.7}
+          >
+            <Icons.NotificationBingIcon width={22} height={22} />
+            <View style={styles.redDot} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        {isSearchActive && (
-          <>
-            <Animated.View
-              style={[
-                styles.searchContainer,
-                {
-                  width: searchWidth.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, availableWidth],
-                  }),
-                  opacity: searchWidth,
-                },
-              ]}
-            >
-              <Icons.Search width={20} height={20} />
+      {/* Feeling row */}
+      <View style={styles.feelingRow}>
+        <Text style={styles.feelingText}>How are you feeling today?</Text>
+        <View style={styles.emojiRow}>
+          <TouchableOpacity
+            style={styles.emojiCircle}
+            onPress={() => onFeelingPress?.(0)}
+            activeOpacity={0.7}
+          >
+            <Icons.RelievedFaceIcon width={24} height={24} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.emojiCircle}
+            onPress={() => onFeelingPress?.(1)}
+            activeOpacity={0.7}
+          >
+            <Icons.SmilingFaceWithHeartEyesIcon width={24} height={24} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.emojiCircle}
+            onPress={() => onFeelingPress?.(2)}
+            activeOpacity={0.7}
+          >
+            <Icons.SmilingFaceWithSmilingEyesIcon width={24} height={24} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Search bar */}
+      <View style={styles.searchWrap}>
+        <Icons.Search width={20} height={20} />
         <TextInput
           style={styles.searchInput}
-                placeholder={placeholder || 'Search'}
-          placeholderTextColor="#999999"
-                value={searchText}
-                onChangeText={handleSearchChange}
-                autoFocus={true}
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+          value={value}
+          onChangeText={onSearchChange}
           editable={true}
         />
-            </Animated.View>
-      <TouchableOpacity
-        style={styles.iconButton}
-              onPress={handleCloseSearch}
-        activeOpacity={0.7}
-      >
-              <View style={styles.closeIcon}>
-                <View style={styles.closeLine1} />
-                <View style={styles.closeLine2} />
-              </View>
-      </TouchableOpacity>
-          </>
-        )}
       </View>
     </View>
   );
@@ -135,71 +136,157 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+    backgroundColor: HEADER_BG,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F0E8FB',
-    borderRadius: 80,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    gap: 8,
+    marginBottom: 20,
   },
-  rightSection: {
+  profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginLeft: 'auto',
-    flexShrink: 1,
+    flex: 1,
+    minWidth: 0,
   },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  avatarWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F0E8FB',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  searchContainer: {
-    height: 40,
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  avatarPlaceholder: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: Fonts.raleway,
+    color: Colors.primary,
+  },
+  nameAddressWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  userName: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  locationIconWrap: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  address: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  actionIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconCircle: {
+    width: ICON_CIRCLE_SIZE,
+    height: ICON_CIRCLE_SIZE,
+    borderRadius: ICON_CIRCLE_SIZE / 2,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  redDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: RED_DOT_SIZE,
+    height: RED_DOT_SIZE,
+    borderRadius: RED_DOT_SIZE / 2,
+    backgroundColor: '#EF4444',
+  },
+  feelingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  feelingText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  emojiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  emojiCircle: {
+    width: EMOJI_CIRCLE_SIZE,
+    height: EMOJI_CIRCLE_SIZE,
+    borderRadius: EMOJI_CIRCLE_SIZE / 2,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    gap: 8,
-    overflow: 'hidden',
-    maxWidth: '100%',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
+    fontFamily: Fonts.openSans,
     fontSize: 14,
-    color: '#000000',
+    color: Colors.textPrimary,
     padding: 0,
-  },
-  closeIcon: {
-    width: 16,
-    height: 16,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeLine1: {
-    position: 'absolute',
-    width: 16,
-    height: 2,
-    backgroundColor: '#000000',
-    transform: [{ rotate: '45deg' }],
-  },
-  closeLine2: {
-    position: 'absolute',
-    width: 16,
-    height: 2,
-    backgroundColor: '#000000',
-    transform: [{ rotate: '-45deg' }],
   },
 });
 
 export default HomeHeader;
-

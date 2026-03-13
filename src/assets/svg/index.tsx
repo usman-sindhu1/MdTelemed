@@ -24,6 +24,8 @@ import VectorIcon from './Vector.svg';
 import Vector1Icon from './Vector (1).svg';
 import Vector2Icon from './Vector (2).svg';
 import CalendarAltIcon from './calendar (1).svg';
+import CalendarTodayIcon from './calendar_today.svg';
+import CalendarClockIcon from './calendar_clock.svg';
 
 const SearchPngIcon = require('./search.png');
 const VectorPngIcon = require('./Vector.png');
@@ -57,6 +59,40 @@ import DoctorImage3 from './image (2).svg';
 import DoctorImage4 from './image (3).svg';
 import AppleIcon from './apple.svg';
 import GoogleIcon from './google.svg';
+import AIChatIcon from './AI Chat.svg';
+import NotificationBingIcon from './notification-bing.svg';
+import Ellipse211Icon from './Ellipse 211.svg';
+import LocationIcon from './location.svg';
+import SmilingFaceWithSmilingEyesIcon from './smiling-face-with-smiling-eyes.svg';
+import SmilingFaceWithHeartEyesIcon from './smiling-face-with-heart-eyes.svg';
+import RelievedFaceIcon from './relieved-face.svg';
+import MedicineBottleIcon from './medicine-bottle.svg';
+import CertificateSolidIcon from './certificate-solid.svg';
+import BxTestTubeIcon from './bx-test-tube.svg';
+import ClipboardListSolidIcon from './clipboard-list-solid.svg';
+import NestClockFarsightAnalogIcon from './nest_clock_farsight_analog.svg';
+import AllergyIcon from './allergy.svg';
+import DentistryIcon from './dentistry.svg';
+import DermatologyIcon from './dermatology.svg';
+import EndocrinologyIcon from './endocrinology.svg';
+import GastroenterologyIcon from './gastroenterology.svg';
+import ImmunologyIcon from './immunology.svg';
+import NephrologyIcon from './nephrology.svg';
+import HematologyIcon from './hematology.svg';
+import NeurologyServiceIcon from './neurology (1).svg';
+import PageInfoIcon from './page_info.svg';
+import Doctor1Icon from './doctor-1.svg';
+import StarFill1Icon from './star-fill-1.svg';
+import BxPlusMedicalIcon from './bx-plus-medical.svg';
+import BxPlusMedical1Icon from './bx-plus-medical-1.svg';
+import VerifyBoldIcon from './verify-bold.svg';
+import VerifyBoldGreyIcon from './verify-bold-grey.svg';
+import VideoCameraIcon from './video camera.svg';
+import RadioButtonUncheckedIcon from './radio button unchecked.svg';
+import RadioButtonCheckedIcon from './radio-button-checked.svg';
+import IconUpload24px from './icon-upload-24px.svg';
+import LocalAtmIcon from './local_atm.svg';
+import CardMembershipIcon from './card_membership.svg';
 
 const Icons = {
   EyeIcon,
@@ -87,6 +123,8 @@ const Icons = {
   SearchPngIcon,
   VectorPngIcon,
   CalendarAltIcon,
+  CalendarTodayIcon,
+  CalendarClockIcon,
   CardiologyIcon,
   NeurologyIcon,
   PhysicalTherapyIcon,
@@ -117,6 +155,40 @@ const Icons = {
   Vector8Icon,
   AppleIcon,
   GoogleIcon,
+  AIChatIcon,
+  NotificationBingIcon,
+  Ellipse211Icon,
+  LocationIcon,
+  SmilingFaceWithSmilingEyesIcon,
+  SmilingFaceWithHeartEyesIcon,
+  RelievedFaceIcon,
+  MedicineBottleIcon,
+  CertificateSolidIcon,
+  BxTestTubeIcon,
+  ClipboardListSolidIcon,
+  NestClockFarsightAnalogIcon,
+  AllergyIcon,
+  DentistryIcon,
+  DermatologyIcon,
+  EndocrinologyIcon,
+  GastroenterologyIcon,
+  ImmunologyIcon,
+  NephrologyIcon,
+  HematologyIcon,
+  NeurologyServiceIcon,
+  PageInfoIcon,
+  Doctor1Icon,
+  StarFill1Icon,
+  BxPlusMedicalIcon,
+  BxPlusMedical1Icon,
+  VerifyBoldIcon,
+  VerifyBoldGreyIcon,
+  VideoCameraIcon,
+  RadioButtonUncheckedIcon,
+  RadioButtonCheckedIcon,
+  IconUpload24px,
+  LocalAtmIcon,
+  CardMembershipIcon,
 };
 
 export default Icons;

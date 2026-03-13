@@ -1,66 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
   Alert,
+  Linking,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Svg, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
 import Input from '../../components/Input';
 import PasswordInput from '../../components/PasswordInput';
 import PhoneInput from '../../components/PhoneInput';
-import Button from '../../components/Button';
 import Colors from '../../constants/colors';
-import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
 import { signUpSchema, validateWithSchema, validateField } from '../../utils/validation';
 import useApi from '../../hooks/UseApi';
 
+const SURFACE_BASE = '#FFFFFF';
+const PRIMARY = '#2563EB';
+const GRADIENT_TOP = '#F8FAFC';
+const GRADIENT_MID = '#F0F4F8';
+const GRADIENT_BOTTOM = '#E8ECF4';
+const BLUE_SHADE_LIGHT = 'rgba(37, 99, 235, 0.06)';
+const BLUE_SHADE_MID = 'rgba(37, 99, 235, 0.12)';
+const BLUE_SHADE_RIGHT = 'rgba(37, 99, 235, 0.2)';
+const INPUT_LABEL_COLOR = '#424242';
+const PLACEHOLDER_COLOR = '#BDBDBD';
+const SOCIAL_BUTTON_TEXT_COLOR = '#757575';
+
 type SignUpScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUp'>;
+
+type SignUpData = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+  date_of_birth: string;
+  address: string;
+  gender: string;
+  phone: string;
+  country: string;
+  city: string;
+};
 
 const SignUp: React.FC = () => {
   const navigation = useNavigation<SignUpScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  
-  // Initialize API hook
-  type SignUpData = {
-    first_name: string;
-    last_name: string;
-    email: string;
-    password: string;
-    date_of_birth: string;
-    address: string;
-    gender: string;
-    phone: string;
-    country: string;
-    city: string;
-  };
-  
+
   const { onRequest, isPending } = useApi<SignUpData>({
     method: 'post',
     key: 'patient-signup',
     isSuccessToast: false,
   });
+
+  // Single "Your Name" value for the combined input
+  const fullName = [firstName, lastName].filter(Boolean).join(' ');
+  const setFullName = (text: string) => {
+    const parts = text.trim().split(/\s+/);
+    setFirstName(parts[0] || '');
+    setLastName(parts.slice(1).join(' ') || '');
+  };
 
   const handleFieldChange = async (
     field: string,
@@ -68,42 +84,31 @@ const SignUp: React.FC = () => {
     schemaField?: string
   ) => {
     const fieldName = schemaField || field;
-    
-    // Update state
     if (field === 'firstName') setFirstName(value as string);
     else if (field === 'lastName') setLastName(value as string);
     else if (field === 'email') setEmail(value as string);
-    else if (field === 'dateOfBirth') setDateOfBirth(value as string);
-    else if (field === 'gender') setGender(value as string);
     else if (field === 'phone') setPhone(value as string);
-    else if (field === 'address') setAddress(value as string);
     else if (field === 'password') setPassword(value as string);
     else if (field === 'confirmPassword') setConfirmPassword(value as string);
     else if (field === 'agreeToTerms') setAgreeToTerms(value as boolean);
 
-    // Clear error when user starts typing
     if (errors[fieldName]) {
       const newErrors = { ...errors };
       delete newErrors[fieldName];
       setErrors(newErrors);
     }
 
-    // Validate on blur if field was touched
     if (touched[fieldName] && typeof value === 'string') {
       const formData = {
         firstName,
         lastName,
         email,
-        dateOfBirth,
-        gender,
         phone,
-        address,
         password,
         confirmPassword,
         agreeToTerms,
         [field]: value,
       };
-      
       const { isValid, error } = await validateField(
         signUpSchema,
         fieldName,
@@ -118,27 +123,21 @@ const SignUp: React.FC = () => {
 
   const handleFieldBlur = async (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
-    
     const formData = {
       firstName,
       lastName,
       email,
-      dateOfBirth,
-      gender,
       phone,
-      address,
       password,
       confirmPassword,
       agreeToTerms,
     };
-
     const { isValid, error } = await validateField(
       signUpSchema,
       field,
       formData[field as keyof typeof formData],
       formData
     );
-    
     if (!isValid && error) {
       setErrors((prev) => ({ ...prev, [field]: error }));
     } else if (errors[field]) {
@@ -149,29 +148,24 @@ const SignUp: React.FC = () => {
   };
 
   const handleSignUp = async () => {
-    // Mark all fields as touched
     setTouched({
       firstName: true,
       lastName: true,
       email: true,
-      dateOfBirth: true,
-      gender: true,
       phone: true,
-      address: true,
       password: true,
       confirmPassword: true,
       agreeToTerms: true,
     });
 
-    // Validate entire form
     const formData = {
       firstName,
       lastName,
       email,
-      dateOfBirth,
-      gender,
+      dateOfBirth: '',
+      gender: '',
       phone,
-      address,
+      address: '',
       password,
       confirmPassword,
       agreeToTerms,
@@ -187,35 +181,28 @@ const SignUp: React.FC = () => {
       return;
     }
 
-    // Clear errors if validation passes
     setErrors({});
 
-    // Prepare API request data
     const apiData = {
       first_name: firstName,
       last_name: lastName,
-      email: email,
-      password: password,
-      date_of_birth: dateOfBirth,
-      address: address,
-      gender: gender,
-      phone: phone,
-      country: country || '',
-      city: city || '',
+      email,
+      password,
+      date_of_birth: '',
+      address: '',
+      gender: '',
+      phone,
+      country: '',
+      city: '',
     };
 
-    // Call the API
     onRequest<SignUpData>({
       path: '/otp/patient/signup',
       data: apiData as SignUpData,
-      onSuccess: (response) => {
-        console.log('Sign up successful:', response);
-        // Navigate to verify email screen on success
+      onSuccess: () => {
         navigation.navigate('VerifyEmail');
       },
       onError: (error: any) => {
-        console.error('Sign up error:', error);
-        // Show error message to user
         const errorMessage = error?.message || 'Failed to create account. Please try again.';
         Alert.alert('Sign Up Failed', errorMessage, [{ text: 'OK' }]);
       },
@@ -230,257 +217,349 @@ const SignUp: React.FC = () => {
     navigation.goBack();
   };
 
+  const backButtonOpacity = useRef(new Animated.Value(1)).current;
+  const [backButtonVisible, setBackButtonVisible] = useState(true);
+
+  const showBackButton = () => {
+    setBackButtonVisible(true);
+    Animated.timing(backButtonOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideBackButton = () => {
+    setBackButtonVisible(false);
+    Animated.timing(backButtonOpacity, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleTermsLink = () => {
+    Linking.openURL('https://example.com/terms').catch(() => {});
+  };
+
+  const handlePrivacyLink = () => {
+    Linking.openURL('https://example.com/privacy').catch(() => {});
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.gradient}
       >
-        {/* Header with Back Button and Logo */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.7}
+        <View style={styles.gradientOverlayWrap} pointerEvents="none">
+          <LinearGradient
+            colors={[
+              'transparent',
+              'transparent',
+              BLUE_SHADE_LIGHT,
+              BLUE_SHADE_MID,
+              BLUE_SHADE_RIGHT,
+            ]}
+            locations={[0, 0.35, 0.6, 0.8, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.gradientOverlay}
+          />
+        </View>
+        <SafeAreaView style={styles.container} edges={['top']}>
+          <Animated.View
+            style={[styles.backButton, { top: insets.top + 8, opacity: backButtonOpacity }]}
+            pointerEvents={backButtonVisible ? 'box-none' : 'none'}
           >
-            <Icons.Back width={24} height={24} />
-          </TouchableOpacity>
-          <View style={styles.logoSection}>
-            <Icons.Logo1 width={250} height={125} />
-          </View>
-        </View>
-
-        {/* Sign Up Prompt */}
-        <View style={styles.signUpPrompt}>
-          <View style={styles.titleWrapper}>
-            <Svg height="40" width="100%">
-              <Defs>
-                <SvgLinearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor={Colors.gradient.title.start} stopOpacity="1" />
-                  <Stop offset="100%" stopColor={Colors.gradient.title.end} stopOpacity="1" />
-                </SvgLinearGradient>
-              </Defs>
-              <SvgText
-                x="50%"
-                y="28"
-                fontSize="32"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                Create your account!
-              </SvgText>
-            </Svg>
-          </View>
-          <Text style={styles.signUpSubtitle}>
-            Provide your information below to create your account on Smart Health Center.
-          </Text>
-        </View>
-
-        {/* Input Fields */}
-        <View style={styles.inputSection}>
-          {/* First Name and Last Name Row */}
-          <View style={styles.nameRow}>
-            <Input
-              placeholder="First name"
-              value={firstName}
-              onChangeText={(text) => handleFieldChange('firstName', text)}
-              onBlur={() => handleFieldBlur('firstName')}
-              size="half"
-              style={styles.input}
-              error={errors.firstName}
-            />
-            <Input
-              placeholder="Last name"
-              value={lastName}
-              onChangeText={(text) => handleFieldChange('lastName', text)}
-              onBlur={() => handleFieldBlur('lastName')}
-              size="half"
-              style={styles.input}
-              error={errors.lastName}
-            />
-          </View>
-
-          <Input
-            placeholder="Email"
-            value={email}
-            onChangeText={(text) => handleFieldChange('email', text)}
-            onBlur={() => handleFieldBlur('email')}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.input}
-            error={errors.email}
-          />
-
-          <Input
-            placeholder="Date of birth"
-            value={dateOfBirth}
-            onChangeText={(text) => handleFieldChange('dateOfBirth', text)}
-            onBlur={() => handleFieldBlur('dateOfBirth')}
-            style={styles.input}
-            error={errors.dateOfBirth}
-          />
-
-          <Input
-            placeholder="Gender"
-            value={gender}
-            onChangeText={(text) => handleFieldChange('gender', text)}
-            onBlur={() => handleFieldBlur('gender')}
-            style={styles.input}
-            error={errors.gender}
-          />
-
-          <PhoneInput
-            value={phone}
-            onChangeText={(text) => handleFieldChange('phone', text)}
-            placeholder="Phone"
-            error={errors.phone}
-          />
-
-          <Input
-            placeholder="Address"
-            value={address}
-            onChangeText={(text) => handleFieldChange('address', text)}
-            onBlur={() => handleFieldBlur('address')}
-            style={styles.input}
-            error={errors.address}
-          />
-
-          <PasswordInput
-            placeholder="Password"
-            value={password}
-            onChangeText={(text) => handleFieldChange('password', text)}
-            onBlur={() => handleFieldBlur('password')}
-            style={styles.passwordInput}
-            error={errors.password}
-          />
-
-          <PasswordInput
-            placeholder="Confirm password"
-            value={confirmPassword}
-            onChangeText={(text) => handleFieldChange('confirmPassword', text)}
-            onBlur={() => handleFieldBlur('confirmPassword')}
-            style={styles.passwordInput}
-            error={errors.confirmPassword}
-          />
-        </View>
-
-        {/* Terms & Conditions Checkbox */}
-        <View style={styles.termsContainer}>
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() => handleFieldChange('agreeToTerms', !agreeToTerms)}
-            activeOpacity={0.7}
+            <TouchableOpacity
+              onPress={handleBack}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.backButtonTouchable}
+            >
+              <View style={styles.backButtonInner}>
+                <Icons.Back width={22} height={22} />
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={hideBackButton}
+            onScrollEndDrag={showBackButton}
+            onMomentumScrollEnd={showBackButton}
           >
-            <View style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}>
-              {agreeToTerms && <Text style={styles.checkmark}>✓</Text>}
+            {/* Logo */}
+            <View style={styles.logoSection}>
+              <Image
+                source={require('../../assets/svg/logo1.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-            <Text style={styles.termsText}>
-              I agree with{' '}
-              <Text style={styles.termsLink}>Terms & Conditions.</Text>
-            </Text>
-          </TouchableOpacity>
-          {errors.agreeToTerms && (
-            <Text style={styles.termsError}>{errors.agreeToTerms}</Text>
-          )}
-        </View>
 
-        {/* Sign Up Button */}
-        <Button
-          variant="primary"
-          title={isPending ? "Creating Account..." : "Create Account"}
-          onPress={handleSignUp}
-          style={styles.signUpButton}
-          textStyle={styles.signUpButtonText}
-          disabled={isPending}
-        />
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>
+                Create Account! <Text style={styles.emoji}>👋</Text>
+              </Text>
+              <Text style={styles.subtitle}>
+                A global platform where you can discover,{'\n'}book and create appointments with ease.
+              </Text>
+            </View>
 
-        {/* Sign In Section */}
-        <View style={styles.signInSection}>
-          <Text style={styles.signInPrompt}>Already have an account?</Text>
-          <TouchableOpacity
-            onPress={handleSignIn}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.signInLink}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            {/* Inputs */}
+            <View style={styles.inputSection}>
+              <Input
+                label="Your Name"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={fullName}
+                onChangeText={(text) => {
+                  setFullName(text);
+                  if (errors.firstName) {
+                    const next = { ...errors };
+                    delete next.firstName;
+                    setErrors(next);
+                  }
+                }}
+                onBlur={() => handleFieldBlur('firstName')}
+                style={styles.input}
+                error={errors.firstName}
+              />
+              <Input
+                label="Email"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={email}
+                onChangeText={(text) => handleFieldChange('email', text)}
+                onBlur={() => handleFieldBlur('email')}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.input}
+                error={errors.email}
+              />
+              <View style={styles.phoneFieldWrapper}>
+                <Text style={[styles.phoneLabel, styles.inputLabel]}>Phone</Text>
+                <PhoneInput
+                  value={phone}
+                  onChangeText={(text) => handleFieldChange('phone', text)}
+                  placeholder="Write here"
+                  error={errors.phone}
+                  separateInputs
+                />
+              </View>
+              <PasswordInput
+                label="Password"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={password}
+                onChangeText={(text) => handleFieldChange('password', text)}
+                onBlur={() => handleFieldBlur('password')}
+                style={styles.passwordInput}
+                error={errors.password}
+              />
+              <PasswordInput
+                label="Confirm Password"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={confirmPassword}
+                onChangeText={(text) => handleFieldChange('confirmPassword', text)}
+                onBlur={() => handleFieldBlur('confirmPassword')}
+                style={styles.passwordInput}
+                error={errors.confirmPassword}
+              />
+            </View>
+
+            {/* Terms */}
+            <View style={styles.termsContainer}>
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => handleFieldChange('agreeToTerms', !agreeToTerms)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, agreeToTerms && styles.checkboxChecked]}>
+                  {agreeToTerms && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.termsText}>
+                  I agree to{' '}
+                  <Text style={styles.termsLink} onPress={handleTermsLink}>
+                    Terms of Services
+                  </Text>
+                  {' & '}
+                  <Text style={styles.termsLink} onPress={handlePrivacyLink}>
+                    Privacy Policy
+                  </Text>
+                  .
+                </Text>
+              </TouchableOpacity>
+              {errors.agreeToTerms && (
+                <Text style={styles.termsError}>{errors.agreeToTerms}</Text>
+              )}
+            </View>
+
+            {/* Create Account Button */}
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleSignUp}
+              activeOpacity={0.85}
+              disabled={isPending}
+            >
+              <Text style={styles.createButtonText}>
+                {isPending ? 'Creating...' : 'Create Account'}
+              </Text>
+              <Text style={styles.createButtonArrow}>→</Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Social buttons */}
+            <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
+              <Icons.AppleIcon width={22} height={22} />
+              <Text style={styles.socialButtonText}>Continue with Apple</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton} activeOpacity={0.85}>
+              <Icons.GoogleIcon width={22} height={22} />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            {/* Sign In link - scrolls with content */}
+            <View style={styles.signInContainer}>
+              <Text style={styles.signInPrompt}>Already have an account??</Text>
+              <TouchableOpacity onPress={handleSignIn} activeOpacity={0.7}>
+                <Text style={styles.signInLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: SURFACE_BASE,
+  },
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
-    paddingHorizontal: 15,
-    paddingBottom: 40,
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 0,
-    position: 'relative',
-    width: '100%',
+  gradientOverlayWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   backButton: {
     position: 'absolute',
-    left: 0,
+    left: 24,
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     zIndex: 1,
+  },
+  backButtonTouchable: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: SURFACE_BASE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   logoSection: {
     alignItems: 'center',
-    flex: 1,
+    marginBottom: 20,
   },
-  signUpPrompt: {
-    marginBottom: 16,
+  logo: {
+    width: 80,
+    height: 80,
+  },
+  header: {
     alignItems: 'center',
-    marginTop: 0,
+    marginBottom: 28,
   },
-  titleWrapper: {
-    width: '100%',
-    height: 40,
-    alignItems: 'center',
-  },
-  signUpSubtitle: {
-    ...Typography.bodyLarge,
-    fontFamily: Fonts.openSans,
-    color: Colors.textSecondary,
+  title: {
+    fontFamily: Fonts.raleway,
+    fontSize: 26,
+    fontWeight: '700',
+    color: INPUT_LABEL_COLOR,
+    marginBottom: 8,
     textAlign: 'center',
-    fontSize: 13,
-    width: '88%',
+  },
+  emoji: {
+    fontSize: 26,
+  },
+  subtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   inputSection: {
     marginBottom: 20,
-    gap: 16,
+    gap: 18,
   },
-  nameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  inputLabel: {
+    color: INPUT_LABEL_COLOR,
+  },
+  phoneFieldWrapper: {
     width: '100%',
-    gap: 12,
+  },
+  phoneLabel: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: Colors.inputBackground,
+    backgroundColor: SURFACE_BASE,
   },
   passwordInput: {
-    backgroundColor: Colors.inputBackground,
+    backgroundColor: SURFACE_BASE,
   },
   termsContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   checkboxContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   checkbox: {
     width: 20,
@@ -492,11 +571,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
-    marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: Colors.checkboxChecked,
-    borderColor: Colors.checkboxChecked,
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
   },
   checkmark: {
     color: Colors.checkboxText,
@@ -504,51 +582,95 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   termsText: {
-    ...Typography.body,
     fontFamily: Fonts.openSans,
+    fontSize: 14,
     color: Colors.textTertiary,
     flex: 1,
-    flexWrap: 'wrap',
   },
   termsLink: {
-    ...Typography.link,
     fontFamily: Fonts.raleway,
-    color: Colors.link,
+    color: PRIMARY,
+    fontWeight: '600',
   },
   termsError: {
-    ...Typography.caption,
+    fontSize: 12,
     color: Colors.error,
     marginTop: 4,
     marginLeft: 28,
   },
-  signUpButton: {
-    backgroundColor: Colors.buttonPrimary,
-    marginBottom: 16,
-  },
-  signUpButtonText: {
-    ...Typography.button,
-    fontFamily: Fonts.raleway,
-  },
-  signInSection: {
+  createButton: {
+    backgroundColor: PRIMARY,
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 24,
+  },
+  createButtonText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.buttonText,
+  },
+  createButtonArrow: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.buttonText,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.borderLight,
+  },
+  dividerText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: Colors.textLight,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: SURFACE_BASE,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 28,
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  socialButtonText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 15,
+    fontWeight: '500',
+    color: SOCIAL_BUTTON_TEXT_COLOR,
+  },
+  signInContainer: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   signInPrompt: {
-    ...Typography.body,
     fontFamily: Fonts.openSans,
-    color: Colors.textLighter,
-    marginBottom: 0,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 4,
   },
   signInLink: {
-    ...Typography.link,
     fontFamily: Fonts.raleway,
-    color: Colors.link,
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
+    color: PRIMARY,
   },
 });
 
 export default SignUp;
-

@@ -5,37 +5,46 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Svg, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
 import Input from '../../components/Input';
-import Button from '../../components/Button';
 import Colors from '../../constants/colors';
-import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
 import { signInSchema, validateField } from '../../utils/validation';
+
+const SURFACE_BASE = '#FFFFFF';
+const PRIMARY = '#2563EB';
+const GRADIENT_TOP = '#F8FAFC';
+const GRADIENT_MID = '#F0F4F8';
+const GRADIENT_BOTTOM = '#E8ECF4';
+const BLUE_SHADE_LIGHT = 'rgba(37, 99, 235, 0.06)';
+const BLUE_SHADE_MID = 'rgba(37, 99, 235, 0.12)';
+const BLUE_SHADE_RIGHT = 'rgba(37, 99, 235, 0.2)';
+const INPUT_LABEL_COLOR = '#424242';
+const PLACEHOLDER_COLOR = '#BDBDBD';
 
 type ResetYourPasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ResetPassword'>;
 
 const ResetYourPassword: React.FC = () => {
   const navigation = useNavigation<ResetYourPasswordScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const handleEmailChange = async (text: string) => {
     setEmail(text);
-    // Clear error when user starts typing
     if (errors.email) {
       const newErrors = { ...errors };
       delete newErrors.email;
       setErrors(newErrors);
     }
-    // Validate on blur if field was touched
     if (touched.email) {
       const { isValid, error } = await validateField(
         signInSchema,
@@ -51,14 +60,12 @@ const ResetYourPassword: React.FC = () => {
 
   const handleEmailBlur = async () => {
     setTouched((prev) => ({ ...prev, email: true }));
-    
     const { isValid, error } = await validateField(
       signInSchema,
       'email',
       email,
       { email }
     );
-    
     if (!isValid && error) {
       setErrors((prev) => ({ ...prev, email: error }));
     } else if (errors.email) {
@@ -69,29 +76,18 @@ const ResetYourPassword: React.FC = () => {
   };
 
   const handleSendResetLink = async () => {
-    // Mark field as touched
     setTouched({ email: true });
-
-    // Validate email
     const { isValid, error } = await validateField(
       signInSchema,
       'email',
       email,
       { email }
     );
-
     if (!isValid && error) {
       setErrors({ email: error });
       return;
     }
-
-    // Clear errors if validation passes
     setErrors({});
-
-    // Handle send reset link logic here
-    console.log('Send reset link pressed', { email });
-
-    // Navigate to verify code screen
     navigation.navigate('VerifyCode');
   };
 
@@ -103,188 +99,225 @@ const ResetYourPassword: React.FC = () => {
     navigation.navigate('SignIn');
   };
 
-  const handleSignUp = () => {
-    navigation.navigate('SignUp');
-  };
-
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.gradient}
       >
-        {/* Header with Back Button and Logo */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            activeOpacity={0.7}
-          >
-            <Icons.Back width={24} height={24} />
-          </TouchableOpacity>
-          <View style={styles.logoSection}>
-            <Icons.Logo1 width={250} height={125} />
-          </View>
-        </View>
-
-        {/* Reset Prompt */}
-        <View style={styles.resetPrompt}>
-          <View style={styles.titleWrapper}>
-            <Svg height="80" width="100%">
-              <Defs>
-                <SvgLinearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor={Colors.gradient.title.start} stopOpacity="1" />
-                  <Stop offset="100%" stopColor={Colors.gradient.title.end} stopOpacity="1" />
-                </SvgLinearGradient>
-              </Defs>
-              <SvgText
-                x="50%"
-                y="36"
-                fontSize="40"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                Reset your
-              </SvgText>
-              <SvgText
-                x="50%"
-                y="76"
-                fontSize="40"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                password
-              </SvgText>
-            </Svg>
-          </View>
-          <Text style={styles.resetSubtitle}>
-            Kindly provide your email address to reset your account password.
-          </Text>
-        </View>
-
-        {/* Input Field */}
-        <View style={styles.inputSection}>
-          <Input
-            placeholder="Email"
-            value={email}
-            onChangeText={handleEmailChange}
-            onBlur={handleEmailBlur}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.input}
-            error={errors.email}
+        <View style={styles.gradientOverlayWrap} pointerEvents="none">
+          <LinearGradient
+            colors={[
+              'transparent',
+              'transparent',
+              BLUE_SHADE_LIGHT,
+              BLUE_SHADE_MID,
+              BLUE_SHADE_RIGHT,
+            ]}
+            locations={[0, 0.35, 0.6, 0.8, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.gradientOverlay}
           />
         </View>
-
-        {/* Send Reset Link Button */}
-        <Button
-          variant="primary"
-          title="Send OTP"
-          onPress={handleSendResetLink}
-          style={styles.resetButton}
-          textStyle={styles.resetButtonText}
-        />
-
-        {/* Sign In Section */}
-        <View style={styles.signInSection}>
-          <Text style={styles.signInPrompt}>Remember your password?</Text>
+        <SafeAreaView style={styles.container} edges={['top']}>
           <TouchableOpacity
-            onPress={handleSignUp}
+            style={[styles.backButton, { top: insets.top + 8 }]}
+            onPress={handleBack}
             activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Text style={styles.signUpLink}>Sign In</Text>
+            <View style={styles.backButtonInner}>
+              <Icons.Back width={22} height={22} />
+            </View>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Logo */}
+            <View style={styles.logoSection}>
+              <Image
+                source={require('../../assets/svg/logo1.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Reset your password</Text>
+              <Text style={styles.subtitle}>
+                Kindly provide your email address to reset your account password.
+              </Text>
+            </View>
+
+            {/* Email input */}
+            <View style={styles.inputSection}>
+              <Input
+                label="Email"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={email}
+                onChangeText={handleEmailChange}
+                onBlur={handleEmailBlur}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.input}
+                error={errors.email}
+              />
+            </View>
+
+            {/* Send OTP button */}
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handleSendResetLink}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.sendButtonText}>Send OTP</Text>
+              <Text style={styles.sendButtonArrow}>→</Text>
+            </TouchableOpacity>
+
+            {/* Sign In link - scrolls with content */}
+            <View style={styles.signInContainer}>
+              <Text style={styles.signInPrompt}>Remember your password?</Text>
+              <TouchableOpacity onPress={handleSignIn} activeOpacity={0.7}>
+                <Text style={styles.signInLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: SURFACE_BASE,
+  },
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+  },
+  gradientOverlayWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   scrollContent: {
-    paddingHorizontal: 15,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 0,
-    position: 'relative',
-    width: '100%',
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   backButton: {
     position: 'absolute',
-    left: 0,
+    left: 24,
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     zIndex: 1,
+  },
+  backButtonInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: SURFACE_BASE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   logoSection: {
     alignItems: 'center',
-    flex: 1,
+    marginBottom: 20,
   },
-  resetPrompt: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  titleWrapper: {
-    width: '100%',
+  logo: {
+    width: 80,
     height: 80,
-    marginBottom: 16,
   },
-  resetSubtitle: {
-    ...Typography.bodyLarge,
-    fontFamily: Fonts.openSans,
-    color: Colors.textSecondary,
-    fontSize: 13,
+  header: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  title: {
+    fontFamily: Fonts.raleway,
+    fontSize: 26,
+    fontWeight: '700',
+    color: INPUT_LABEL_COLOR,
+    marginBottom: 8,
     textAlign: 'center',
-    width: '88%',
+  },
+  subtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   inputSection: {
-    marginBottom: 20,
-    gap: 16,
+    marginBottom: 24,
+  },
+  inputLabel: {
+    color: INPUT_LABEL_COLOR,
   },
   input: {
-    backgroundColor: Colors.inputBackground,
+    backgroundColor: SURFACE_BASE,
   },
-  resetButton: {
-    backgroundColor: Colors.buttonPrimary,
-    marginBottom: 16,
-  },
-  resetButtonText: {
-    ...Typography.button,
-    fontFamily: Fonts.raleway,
-  },
-  signInSection: {
+  sendButton: {
+    backgroundColor: PRIMARY,
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 20,
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 24,
+  },
+  sendButtonText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.buttonText,
+  },
+  sendButtonArrow: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.buttonText,
+  },
+  signInContainer: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   signInPrompt: {
-    ...Typography.body,
     fontFamily: Fonts.openSans,
-    color: Colors.textLighter,
+    fontSize: 14,
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
-  signUpLink: {
-    ...Typography.link,
+  signInLink: {
     fontFamily: Fonts.raleway,
-    color: Colors.link,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
+    color: PRIMARY,
   },
 });
 
 export default ResetYourPassword;
-

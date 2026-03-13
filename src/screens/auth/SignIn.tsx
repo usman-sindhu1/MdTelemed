@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -27,6 +28,14 @@ const PRIMARY = '#2563EB';
 const GRADIENT_TOP = '#F8FAFC';       // very light blue-white
 const GRADIENT_MID = '#F0F4F8';      // light cool grey-blue
 const GRADIENT_BOTTOM = '#E8ECF4';   // muted lavender-blue
+// Soft blue tint for right-side gradient (smooth blend, no hard edge)
+const BLUE_SHADE_LIGHT = 'rgba(37, 99, 235, 0.06)';
+const BLUE_SHADE_MID = 'rgba(37, 99, 235, 0.12)';
+const BLUE_SHADE_RIGHT = 'rgba(37, 99, 235, 0.2)';
+const FORGOT_PASSWORD_RED = '#DC2626';
+const INPUT_LABEL_COLOR = '#424242';
+const PLACEHOLDER_COLOR = '#BDBDBD';
+const SOCIAL_BUTTON_TEXT_COLOR = '#757575';
 
 type SignInScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignIn'>;
 
@@ -144,6 +153,22 @@ const SignIn: React.FC = () => {
         end={{ x: 0.5, y: 1 }}
         style={styles.gradient}
       >
+        {/* Full-width soft blue shade – smooth blend from left to right, no half-half */}
+        <View style={styles.gradientOverlayWrap} pointerEvents="none">
+          <LinearGradient
+            colors={[
+              'transparent',
+              'transparent',
+              BLUE_SHADE_LIGHT,
+              BLUE_SHADE_MID,
+              BLUE_SHADE_RIGHT,
+            ]}
+            locations={[0, 0.35, 0.6, 0.8, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.gradientOverlay}
+          />
+        </View>
         <SafeAreaView style={styles.container} edges={['top']}>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
@@ -152,9 +177,11 @@ const SignIn: React.FC = () => {
           >
             {/* App Icon */}
             <View style={styles.logoSection}>
-             
-                <Icons.Logo1 width={80} height={80} />
-            
+              <Image
+                source={require('../../assets/svg/logo1.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Header */}
@@ -172,6 +199,8 @@ const SignIn: React.FC = () => {
               <Input
                 label="Email Address"
                 placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
                 value={email}
                 onChangeText={handleEmailChange}
                 onBlur={handleEmailBlur}
@@ -183,6 +212,8 @@ const SignIn: React.FC = () => {
               <PasswordInput
                 label="Password"
                 placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
                 value={password}
                 onChangeText={handlePasswordChange}
                 onBlur={handlePasswordBlur}
@@ -234,15 +265,15 @@ const SignIn: React.FC = () => {
               <Icons.GoogleIcon width={22} height={22} />
               <Text style={styles.socialButtonText}>Continue with Google</Text>
             </TouchableOpacity>
-          </ScrollView>
 
-          {/* Sign up link at bottom */}
-          <SafeAreaView edges={['bottom']} style={styles.signUpContainer}>
-            <Text style={styles.signUpPrompt}>Don't have an account?</Text>
-            <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
-              <Text style={styles.signUpLink}>Create One</Text>
-            </TouchableOpacity>
-          </SafeAreaView>
+            {/* Sign up link - scrolls with content */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpPrompt}>Don't have an account?</Text>
+              <TouchableOpacity onPress={handleSignUp} activeOpacity={0.7}>
+                <Text style={styles.signUpLink}>Create One</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </LinearGradient>
     </View>
@@ -264,13 +295,22 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 32,
+  },
+  gradientOverlayWrap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   logoSection: {
     alignItems: 'center',
     marginBottom: 20,
   },
- 
+  logo: {
+    width: 80,
+    height: 80,
+  },
   header: {
     alignItems: 'center',
     marginBottom: 28,
@@ -279,7 +319,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.raleway,
     fontSize: 26,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: INPUT_LABEL_COLOR,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -297,6 +337,9 @@ const styles = StyleSheet.create({
   inputSection: {
     marginBottom: 20,
     gap: 18,
+  },
+  inputLabel: {
+    color: INPUT_LABEL_COLOR,
   },
   input: {
     backgroundColor: SURFACE_BASE,
@@ -343,7 +386,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.openSans,
     fontSize: 14,
     fontWeight: '500',
-    color: PRIMARY,
+    color: FORGOT_PASSWORD_RED,
   },
   loginButton: {
     backgroundColor: PRIMARY,
@@ -399,12 +442,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.openSans,
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.textPrimary,
+    color: SOCIAL_BUTTON_TEXT_COLOR,
   },
   signUpContainer: {
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 16,
     backgroundColor: 'transparent',
   },

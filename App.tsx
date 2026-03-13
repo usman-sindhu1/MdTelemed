@@ -10,20 +10,25 @@ import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import RootNavigator from './src/navigation/RootNavigator';
 import store from './src/store';
+
+const queryClient = new QueryClient();
 
 function App(): React.JSX.Element {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
-        <SafeAreaProvider>
-          <StatusBar 
-            barStyle="dark-content" 
-            backgroundColor="#FFFFFF" 
-          />
-          <RootNavigator />
-        </SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <StatusBar 
+              barStyle="dark-content" 
+              backgroundColor="#FFFFFF" 
+            />
+            <RootNavigator />
+          </SafeAreaProvider>
+        </QueryClientProvider>
       </Provider>
     </GestureHandlerRootView>
   );

@@ -5,295 +5,242 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Svg, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
 import PasswordInput from '../../components/PasswordInput';
-import Button from '../../components/Button';
 import Colors from '../../constants/colors';
-import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
 import { signUpSchema, validateField } from '../../utils/validation';
+
+const SURFACE_BASE = '#FFFFFF';
+const PRIMARY = '#2563EB';
+const GRADIENT_TOP = '#F8FAFC';
+const GRADIENT_MID = '#F0F4F8';
+const GRADIENT_BOTTOM = '#E8ECF4';
+const BLUE_SHADE_LIGHT = 'rgba(37, 99, 235, 0.06)';
+const BLUE_SHADE_MID = 'rgba(37, 99, 235, 0.12)';
+const BLUE_SHADE_RIGHT = 'rgba(37, 99, 235, 0.2)';
+const INPUT_LABEL_COLOR = '#424242';
+const PLACEHOLDER_COLOR = '#BDBDBD';
 
 type ChangePasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'ChangePassword'>;
 
 const ChangePassword: React.FC = () => {
   const navigation = useNavigation<ChangePasswordScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const handlePasswordChange = async (field: string, value: string) => {
-    if (field === 'newPassword') {
-      setNewPassword(value);
-    } else if (field === 'confirmPassword') {
-      setConfirmPassword(value);
-    }
-
-    // Clear error when user starts typing
+    if (field === 'newPassword') setNewPassword(value);
+    else if (field === 'confirmPassword') setConfirmPassword(value);
     if (errors[field]) {
-      const newErrors = { ...errors };
-      delete newErrors[field];
-      setErrors(newErrors);
+      const next = { ...errors };
+      delete next[field];
+      setErrors(next);
     }
-
-    // Validate on blur if field was touched
     if (touched[field]) {
       const formData = {
         password: field === 'newPassword' ? value : newPassword,
         confirmPassword: field === 'confirmPassword' ? value : confirmPassword,
       };
-
       const { isValid, error } = await validateField(
         signUpSchema,
         field === 'newPassword' ? 'password' : 'confirmPassword',
         value,
         formData
       );
-      if (!isValid && error) {
-        setErrors((prev) => ({ ...prev, [field]: error }));
-      }
+      if (!isValid && error) setErrors((prev) => ({ ...prev, [field]: error }));
     }
   };
 
   const handlePasswordBlur = async (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
-    
-    const formData = {
-      password: newPassword,
-      confirmPassword: confirmPassword,
-    };
-
+    const formData = { password: newPassword, confirmPassword };
     const fieldName = field === 'newPassword' ? 'password' : 'confirmPassword';
-    const { isValid, error } = await validateField(
-      signUpSchema,
-      fieldName,
-      field === 'newPassword' ? newPassword : confirmPassword,
-      formData
-    );
-    
-    if (!isValid && error) {
-      setErrors((prev) => ({ ...prev, [field]: error }));
-    } else if (errors[field]) {
-      const newErrors = { ...errors };
-      delete newErrors[field];
-      setErrors(newErrors);
+    const value = field === 'newPassword' ? newPassword : confirmPassword;
+    const { isValid, error } = await validateField(signUpSchema, fieldName, value, formData);
+    if (!isValid && error) setErrors((prev) => ({ ...prev, [field]: error }));
+    else if (errors[field]) {
+      const next = { ...errors };
+      delete next[field];
+      setErrors(next);
     }
   };
 
   const handleUpdatePassword = async () => {
-    // Mark all fields as touched
-    setTouched({
-      newPassword: true,
-      confirmPassword: true,
-    });
-
-    // Validate passwords
-    const formData = {
-      password: newPassword,
-      confirmPassword: confirmPassword,
-    };
-
-    const { isValid: isPasswordValid, error: passwordError } = await validateField(
-      signUpSchema,
-      'password',
-      newPassword,
-      formData
-    );
-
-    const { isValid: isConfirmValid, error: confirmError } = await validateField(
-      signUpSchema,
-      'confirmPassword',
-      confirmPassword,
-      formData
-    );
-
-    if (!isPasswordValid && passwordError) {
-      setErrors((prev) => ({ ...prev, newPassword: passwordError }));
-    }
-    if (!isConfirmValid && confirmError) {
-      setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
-    }
-
-    if (!isPasswordValid || !isConfirmValid) {
-      return;
-    }
-
-    // Clear errors if validation passes
+    setTouched({ newPassword: true, confirmPassword: true });
+    const formData = { password: newPassword, confirmPassword };
+    const { isValid: pValid, error: pError } = await validateField(signUpSchema, 'password', newPassword, formData);
+    const { isValid: cValid, error: cError } = await validateField(signUpSchema, 'confirmPassword', confirmPassword, formData);
+    if (!pValid && pError) setErrors((prev) => ({ ...prev, newPassword: pError }));
+    if (!cValid && cError) setErrors((prev) => ({ ...prev, confirmPassword: cError }));
+    if (!pValid || !cValid) return;
     setErrors({});
-
-    // Handle update password logic here
-    console.log('Update password pressed', { newPassword, confirmPassword });
-
-    // Navigate to sign in after successful password change
     navigation.navigate('SignIn');
   };
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
+  const handleBack = () => navigation.goBack();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.gradient}
       >
-        {/* Header with Back Button and Logo */}
-        <View style={styles.header}>
+        <View style={styles.gradientOverlayWrap} pointerEvents="none">
+          <LinearGradient
+            colors={['transparent', 'transparent', BLUE_SHADE_LIGHT, BLUE_SHADE_MID, BLUE_SHADE_RIGHT]}
+            locations={[0, 0.35, 0.6, 0.8, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.gradientOverlay}
+          />
+        </View>
+        <SafeAreaView style={styles.container} edges={['top']}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { top: insets.top + 8 }]}
             onPress={handleBack}
             activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Icons.Back width={24} height={24} />
+            <View style={styles.backButtonInner}>
+              <Icons.Back width={22} height={22} />
+            </View>
           </TouchableOpacity>
-          <View style={styles.logoSection}>
-            <Icons.Logo1 width={250} height={125} />
-          </View>
-        </View>
-
-        {/* Change Password Prompt */}
-        <View style={styles.changePasswordPrompt}>
-          <View style={styles.titleWrapper}>
-            <Svg height="80" width="100%">
-              <Defs>
-                <SvgLinearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor={Colors.gradient.title.start} stopOpacity="1" />
-                  <Stop offset="100%" stopColor={Colors.gradient.title.end} stopOpacity="1" />
-                </SvgLinearGradient>
-              </Defs>
-              <SvgText
-                x="50%"
-                y="36"
-                fontSize="40"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                New
-              </SvgText>
-              <SvgText
-                x="50%"
-                y="76"
-                fontSize="40"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                password
-              </SvgText>
-            </Svg>
-          </View>
-          <Text style={styles.changePasswordSubtitle}>
-            Enter your new password below to reset your account password.
-          </Text>
-        </View>
-
-        {/* Input Fields */}
-        <View style={styles.inputSection}>
-          <PasswordInput
-            placeholder="New password"
-            value={newPassword}
-            onChangeText={(text) => handlePasswordChange('newPassword', text)}
-            onBlur={() => handlePasswordBlur('newPassword')}
-            style={styles.passwordInput}
-            error={errors.newPassword}
-          />
-
-          <PasswordInput
-            placeholder="Confirm password"
-            value={confirmPassword}
-            onChangeText={(text) => handlePasswordChange('confirmPassword', text)}
-            onBlur={() => handlePasswordBlur('confirmPassword')}
-            style={styles.passwordInput}
-            error={errors.confirmPassword}
-          />
-        </View>
-
-        {/* Update Password Button */}
-        <Button
-          variant="primary"
-          title="Update Password"
-          onPress={handleUpdatePassword}
-          style={styles.updateButton}
-          textStyle={styles.updateButtonText}
-        />
-      </ScrollView>
-    </SafeAreaView>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.logoSection}>
+              <Image source={require('../../assets/svg/logo1.png')} style={styles.logo} resizeMode="contain" />
+            </View>
+            <View style={styles.header}>
+              <Text style={styles.title}>New password</Text>
+              <Text style={styles.subtitle}>
+                Enter your new password below to reset your account password.
+              </Text>
+            </View>
+            <View style={styles.inputSection}>
+              <PasswordInput
+                label="New password"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={newPassword}
+                onChangeText={(text) => handlePasswordChange('newPassword', text)}
+                onBlur={() => handlePasswordBlur('newPassword')}
+                style={styles.passwordInput}
+                error={errors.newPassword}
+              />
+              <PasswordInput
+                label="Confirm password"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={confirmPassword}
+                onChangeText={(text) => handlePasswordChange('confirmPassword', text)}
+                onBlur={() => handlePasswordBlur('confirmPassword')}
+                style={styles.passwordInput}
+                error={errors.confirmPassword}
+              />
+            </View>
+            <TouchableOpacity style={styles.updateButton} onPress={handleUpdatePassword} activeOpacity={0.85}>
+              <Text style={styles.updateButtonText}>Update Password</Text>
+              <Text style={styles.updateButtonArrow}>→</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  root: { flex: 1, backgroundColor: SURFACE_BASE },
+  gradient: { flex: 1 },
+  container: { flex: 1 },
+  gradientOverlayWrap: { ...StyleSheet.absoluteFillObject },
+  gradientOverlay: { ...StyleSheet.absoluteFillObject },
   scrollContent: {
-    paddingHorizontal: 15,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 0,
-    position: 'relative',
-    width: '100%',
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   backButton: {
     position: 'absolute',
-    left: 0,
+    left: 24,
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     zIndex: 1,
   },
-  logoSection: {
+  backButtonInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: SURFACE_BASE,
+    justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  changePasswordPrompt: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  titleWrapper: {
-    width: '100%',
-    height: 80,
-    marginBottom: 16,
-  },
-  changePasswordSubtitle: {
-    ...Typography.bodyLarge,
-    fontFamily: Fonts.openSans,
-    color: Colors.textSecondary,
-    fontSize: 13,
+  logoSection: { alignItems: 'center', marginBottom: 20 },
+  logo: { width: 80, height: 80 },
+  header: { alignItems: 'center', marginBottom: 28 },
+  title: {
+    fontFamily: Fonts.raleway,
+    fontSize: 26,
+    fontWeight: '700',
+    color: INPUT_LABEL_COLOR,
+    marginBottom: 8,
     textAlign: 'center',
-    width: '88%',
   },
-  inputSection: {
-    marginBottom: 20,
-    gap: 16,
+  subtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    textAlign: 'center',
   },
-  passwordInput: {
-    backgroundColor: Colors.inputBackground,
-  },
+  inputSection: { marginBottom: 24, gap: 18 },
+  inputLabel: { color: INPUT_LABEL_COLOR },
+  passwordInput: { backgroundColor: SURFACE_BASE },
   updateButton: {
-    backgroundColor: Colors.buttonPrimary,
-    marginBottom: 16,
+    backgroundColor: PRIMARY,
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   updateButtonText: {
-    ...Typography.button,
     fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.buttonText,
   },
+  updateButtonArrow: { fontSize: 18, fontWeight: '600', color: Colors.buttonText },
 });
 
 export default ChangePassword;
-

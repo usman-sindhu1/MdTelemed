@@ -45,6 +45,10 @@ export interface PhoneInputProps {
    * Callback to get validation state
    */
   onValidationChange?: (isValid: boolean) => void;
+  /**
+   * When true, render country selector and phone number as two separate bordered inputs (Figma style)
+   */
+  separateInputs?: boolean;
 }
 
 /**
@@ -61,6 +65,9 @@ export interface PhoneInputProps {
  *   onChangeFormattedText={(formatted) => console.log(formatted)}
  * />
  */
+const INPUT_HEIGHT = 48;
+const INPUT_BORDER_RADIUS = 24;
+
 export const PhoneInput: React.FC<PhoneInputProps> = ({
   value = '',
   onChangeText,
@@ -70,6 +77,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   placeholder = 'Phone number',
   error,
   onValidationChange,
+  separateInputs = false,
 }) => {
   const phoneInputRef = useRef<PhoneNumberInput>(null);
   const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -120,9 +128,25 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     }
   };
 
+  const containerStyle = separateInputs
+    ? [styles.container, styles.containerSeparate, error && styles.containerError]
+    : [styles.container, error && styles.containerError];
+
+  const phoneContainerStyle = separateInputs
+    ? [styles.phoneContainer, styles.phoneContainerSeparate]
+    : styles.phoneContainer;
+
+  const flagButtonStyle = separateInputs
+    ? [styles.flagButton, styles.flagButtonSeparate, error && styles.flagButtonSeparateError]
+    : [styles.flagButton];
+
+  const textContainerStyle = separateInputs
+    ? [styles.textContainer, styles.textContainerSeparate, error && styles.textContainerSeparateError]
+    : [styles.textContainer];
+
   return (
     <View style={styles.wrapper}>
-      <View style={[styles.container, error && styles.containerError]}>
+      <View style={containerStyle}>
         <PhoneNumberInput
           ref={phoneInputRef}
           value={value}
@@ -131,19 +155,19 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           onChangeText={handleChangeText}
           onChangeFormattedText={handleChangeFormattedText}
           onChangeCountry={onChangeCountry}
-          containerStyle={styles.phoneContainer}
-          textContainerStyle={styles.textContainer}
+          containerStyle={phoneContainerStyle}
+          textContainerStyle={textContainerStyle}
           textInputStyle={[styles.textInput, error && styles.textInputError]}
           codeTextStyle={[styles.codeText, error && styles.codeTextError]}
-          flagButtonStyle={styles.flagButton}
-          countryPickerButtonStyle={styles.countryPickerButton}
+          flagButtonStyle={flagButtonStyle}
+          countryPickerButtonStyle={separateInputs ? [styles.countryPickerButton, styles.countryPickerButtonSeparate] : styles.countryPickerButton}
           renderDropdownImage={<Text style={styles.arrowIcon}>▼</Text>}
           withDarkTheme={false}
           withShadow={false}
           autoFocus={false}
           textInputProps={{
             placeholder,
-            placeholderTextColor: '#757575',
+            placeholderTextColor: '#BDBDBD',
             autoCapitalize: 'none',
             autoCorrect: false,
             keyboardType: 'numeric',
@@ -174,11 +198,29 @@ const styles = StyleSheet.create({
   containerError: {
     borderColor: '#EF4444',
   } as ViewStyle,
+  containerSeparate: {
+    height: INPUT_HEIGHT,
+    borderRadius: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    overflow: 'visible',
+    gap: 12,
+  } as ViewStyle,
   phoneContainer: {
     width: '100%',
     height: '100%',
     backgroundColor: 'transparent',
     borderRadius: 80,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  } as ViewStyle,
+  phoneContainerSeparate: {
+    flexDirection: 'row',
+    height: INPUT_HEIGHT,
+    borderRadius: 0,
+    gap: 12,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingVertical: 0,
   } as ViewStyle,
@@ -190,6 +232,18 @@ const styles = StyleSheet.create({
     height: '100%',
     flex: 1,
     alignItems: 'center',
+  } as ViewStyle,
+  textContainerSeparate: {
+    flex: 1,
+    height: INPUT_HEIGHT,
+    borderRadius: INPUT_BORDER_RADIUS,
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+  } as ViewStyle,
+  textContainerSeparateError: {
+    borderColor: '#EF4444',
   } as ViewStyle,
   textInput: {
     height: '100%',
@@ -234,6 +288,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     flexDirection: 'row',
   } as ViewStyle,
+  flagButtonSeparate: {
+    width: 95,
+    minWidth: 95,
+    height: INPUT_HEIGHT,
+    borderRadius: INPUT_BORDER_RADIUS,
+    borderWidth: 1,
+    borderColor: Colors.inputBorder,
+    backgroundColor: '#FFFFFF',
+    marginRight: 0,
+  } as ViewStyle,
+  flagButtonSeparateError: {
+    borderColor: '#EF4444',
+  } as ViewStyle,
   countryPickerButton: {
     width: 95,
     height: '100%',
@@ -243,6 +310,9 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     paddingRight: 8,
     flexDirection: 'row',
+  } as ViewStyle,
+  countryPickerButtonSeparate: {
+    height: INPUT_HEIGHT,
   } as ViewStyle,
   flagStyle: {
     width: 20,

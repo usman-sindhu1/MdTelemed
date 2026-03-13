@@ -6,75 +6,62 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Svg, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
-import Button from '../../components/Button';
 import Colors from '../../constants/colors';
-import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
+
+const SURFACE_BASE = '#FFFFFF';
+const PRIMARY = '#2563EB';
+const GRADIENT_TOP = '#F8FAFC';
+const GRADIENT_MID = '#F0F4F8';
+const GRADIENT_BOTTOM = '#E8ECF4';
+const BLUE_SHADE_LIGHT = 'rgba(37, 99, 235, 0.06)';
+const BLUE_SHADE_MID = 'rgba(37, 99, 235, 0.12)';
+const BLUE_SHADE_RIGHT = 'rgba(37, 99, 235, 0.2)';
+const INPUT_LABEL_COLOR = '#424242';
 
 type VerifyYourCodeScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'VerifyCode'>;
 
 const VerifyYourCode: React.FC = () => {
   const navigation = useNavigation<VerifyYourCodeScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [email] = useState('laslie.alexander@gmail.com'); // This could come from props or state
+  const [email] = useState('laslie.alexander@gmail.com');
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const handleOtpChange = (index: number, value: string) => {
-    // Handle paste - if multiple digits are entered, distribute them
     if (value.length > 1) {
-      // Extract only digits
       const digits = value.replace(/\D/g, '').slice(0, 6);
-      
       if (digits.length > 0) {
         const newOtp = ['', '', '', '', '', ''];
-        
-        // When pasting, always fill from index 0 (first input)
-        // This ensures pasting in any input fills all 6 inputs from the start
         for (let i = 0; i < digits.length && i < 6; i++) {
           newOtp[i] = digits[i];
         }
-        
         setOtp(newOtp);
-        
-        // Focus the last filled input or blur if all are filled
         const lastFilledIndex = Math.min(digits.length - 1, 5);
         if (lastFilledIndex < 5) {
-          setTimeout(() => {
-            inputRefs.current[lastFilledIndex + 1]?.focus();
-          }, 0);
+          setTimeout(() => inputRefs.current[lastFilledIndex + 1]?.focus(), 0);
         } else {
-          setTimeout(() => {
-            inputRefs.current[lastFilledIndex]?.blur();
-          }, 0);
+          setTimeout(() => inputRefs.current[lastFilledIndex]?.blur(), 0);
         }
       }
       return;
     }
-    
-    // Only allow numbers for single character
-    if (value && !/^\d+$/.test(value)) {
-      return;
-    }
-
+    if (value && !/^\d+$/.test(value)) return;
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
   const handleKeyPress = (index: number, key: string) => {
-    // Handle backspace to move to previous input
     if (key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -83,9 +70,6 @@ const VerifyYourCode: React.FC = () => {
   const handleVerify = () => {
     const otpCode = otp.join('');
     if (otpCode.length === 6) {
-      // Handle verification logic here
-      console.log('Verify OTP:', otpCode);
-      // Navigate to change password screen
       navigation.navigate('ChangePassword');
     }
   };
@@ -93,205 +77,170 @@ const VerifyYourCode: React.FC = () => {
   const handleResend = () => {
     setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
-    console.log('Resend code');
-    
-    // Navigate to change password screen
-    navigation.navigate('ChangePassword');
   };
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
+  const handleBack = () => navigation.goBack();
+  const handleChangeEmail = () => navigation.navigate('ResetPassword');
 
-  const handleChangeEmail = () => {
-    navigation.navigate('ResetPassword');
-  };
+  const isComplete = otp.every((d) => d !== '');
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[GRADIENT_TOP, GRADIENT_MID, GRADIENT_BOTTOM]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.gradient}
       >
-        {/* Header with Back Button and Logo */}
-        <View style={styles.header}>
+        <View style={styles.gradientOverlayWrap} pointerEvents="none">
+          <LinearGradient
+            colors={['transparent', 'transparent', BLUE_SHADE_LIGHT, BLUE_SHADE_MID, BLUE_SHADE_RIGHT]}
+            locations={[0, 0.35, 0.6, 0.8, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.gradientOverlay}
+          />
+        </View>
+        <SafeAreaView style={styles.container} edges={['top']}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { top: insets.top + 8 }]}
             onPress={handleBack}
             activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Icons.Back width={24} height={24} />
+            <View style={styles.backButtonInner}>
+              <Icons.Back width={22} height={22} />
+            </View>
           </TouchableOpacity>
-          <View style={styles.logoSection}>
-            <Icons.Logo1 width={250} height={125} />
-          </View>
-        </View>
-
-        {/* Verify Prompt */}
-        <View style={styles.verifyPrompt}>
-          <View style={styles.titleWrapper}>
-            <Svg height="80" width="100%">
-              <Defs>
-                <SvgLinearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor={Colors.gradient.title.start} stopOpacity="1" />
-                  <Stop offset="100%" stopColor={Colors.gradient.title.end} stopOpacity="1" />
-                </SvgLinearGradient>
-              </Defs>
-              <SvgText
-                x="50%"
-                y="36"
-                fontSize="40"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                Verify your
-              </SvgText>
-              <SvgText
-                x="50%"
-                y="76"
-                fontSize="40"
-                fontWeight="700"
-                fontFamily={Fonts.raleway}
-                fill="url(#titleGradient)"
-                textAnchor="middle"
-              >
-                code
-              </SvgText>
-            </Svg>
-          </View>
-          <Text style={styles.verifySubtitle}>
-            Verification code has been sent to your email{' '}
-            <Text style={styles.emailText}>{email}</Text>
-            . Please enter your verification code to verify your identity.
-          </Text>
-          <TouchableOpacity
-            onPress={handleChangeEmail}
-            activeOpacity={0.7}
-            style={styles.changeEmailContainer}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.changeEmailLink}>Change Email</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* OTP Input Fields */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
-              style={[
-                styles.otpInput,
-                otp[index] && styles.otpInputFilled,
-              ]}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(index, value)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
-              keyboardType="number-pad"
-              maxLength={6}
-              selectTextOnFocus
-              autoFocus={index === 0}
-            />
-          ))}
-        </View>
-
-        {/* Resend Code Section */}
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>
-            If you didn't receive the code then click on the button below.
-          </Text>
-          <TouchableOpacity
-            onPress={handleResend}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.resendLink}>Resend Code</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            <View style={styles.logoSection}>
+              <Image source={require('../../assets/svg/logo1.png')} style={styles.logo} resizeMode="contain" />
+            </View>
+            <View style={styles.header}>
+              <Text style={styles.title}>Verify your code.</Text>
+              <Text style={styles.subtitle}>
+                Verification code has been sent to your email{' '}
+                <Text style={styles.emailText}>{email}</Text>
+                . Please enter your verification code to verify your identity.
+              </Text>
+              <TouchableOpacity onPress={handleChangeEmail} activeOpacity={0.7} style={styles.changeEmailWrap}>
+                <Text style={styles.linkText}>Change Email</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.otpContainer}>
+              {otp.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  ref={(ref) => { inputRefs.current[index] = ref; }}
+                  style={[styles.otpInput, digit ? styles.otpInputFilled : null]}
+                  value={digit}
+                  onChangeText={(v) => handleOtpChange(index, v)}
+                  onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  selectTextOnFocus
+                  autoFocus={index === 0}
+                />
+              ))}
+            </View>
+            <View style={styles.resendSection}>
+              <Text style={styles.resendPrompt}>
+                If you didn't receive the code then click on the button below.
+              </Text>
+              <TouchableOpacity onPress={handleResend} activeOpacity={0.7}>
+                <Text style={styles.linkText}>Resend Code</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[styles.verifyButton, !isComplete && styles.verifyButtonDisabled]}
+              onPress={handleVerify}
+              activeOpacity={0.85}
+              disabled={!isComplete}
+            >
+              <Text style={styles.verifyButtonText}>Verify</Text>
+              <Text style={styles.verifyButtonArrow}>→</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  root: { flex: 1, backgroundColor: SURFACE_BASE },
+  gradient: { flex: 1 },
+  container: { flex: 1 },
+  gradientOverlayWrap: { ...StyleSheet.absoluteFillObject },
+  gradientOverlay: { ...StyleSheet.absoluteFillObject },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 15,
-    paddingBottom: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    position: 'relative',
-    width: '100%',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   backButton: {
     position: 'absolute',
-    left: 0,
+    left: 24,
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     zIndex: 1,
   },
-  logoSection: {
+  backButtonInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: SURFACE_BASE,
+    justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  verifyPrompt: {
-    marginBottom: 32,
-    alignItems: 'center',
-  },
-  titleWrapper: {
-    width: '100%',
-    height: 80,
-    marginBottom: 16,
-  },
-  verifySubtitle: {
-    ...Typography.bodyLarge,
-    fontFamily: Fonts.openSans,
-    color: Colors.textSecondary,
-    fontSize: 13,
-    textAlign: 'center',
-    width: '88%',
-    marginBottom: 12,
-  },
-  emailText: {
-    fontFamily: Fonts.openSans,
-    color: Colors.textPrimary,
-    fontWeight: '600',
-  },
-  changeEmailContainer: {
-    marginTop: 4,
-  },
-  changeEmailLink: {
-    ...Typography.link,
+  logoSection: { alignItems: 'center', marginBottom: 20 },
+  logo: { width: 80, height: 80 },
+  header: { alignItems: 'center', marginBottom: 28 },
+  title: {
     fontFamily: Fonts.raleway,
-    color: Colors.link,
-    fontSize: 14,
+    fontSize: 26,
     fontWeight: '700',
+    color: INPUT_LABEL_COLOR,
+    marginBottom: 8,
+    textAlign: 'center',
   },
+  subtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emailText: { fontFamily: Fonts.openSans, color: INPUT_LABEL_COLOR, fontWeight: '600' },
+  changeEmailWrap: { marginBottom: 24 },
+  linkText: { fontFamily: Fonts.raleway, fontSize: 15, fontWeight: '600', color: PRIMARY },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
-    paddingHorizontal: 8,
+    marginBottom: 28,
   },
   otpInput: {
     width: 48,
     height: 56,
-    borderRadius: 80,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: Colors.inputBorder,
-    backgroundColor: Colors.inputBackground,
+    backgroundColor: SURFACE_BASE,
     textAlign: 'center',
     fontSize: 24,
     fontWeight: '700',
@@ -299,28 +248,35 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   otpInputFilled: {
-    borderColor: Colors.primary,
-    backgroundColor: '#F5EFFF',
+    borderColor: PRIMARY,
+    backgroundColor: '#F0F4FF',
   },
-  resendContainer: {
-    alignItems: 'center',
-  },
-  resendText: {
-    ...Typography.body,
+  resendSection: { alignItems: 'center', marginBottom: 28 },
+  resendPrompt: {
     fontFamily: Fonts.openSans,
-    color: Colors.textLighter,
-    textAlign: 'center',
-    marginBottom: 12,
-    width: '88%',
-  },
-  resendLink: {
-    ...Typography.link,
-    fontFamily: Fonts.raleway,
-    color: Colors.link,
     fontSize: 14,
-    fontWeight: '700',
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 8,
   },
+  verifyButton: {
+    backgroundColor: PRIMARY,
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  verifyButtonDisabled: { opacity: 0.6 },
+  verifyButtonText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.buttonText,
+  },
+  verifyButtonArrow: { fontSize: 18, fontWeight: '600', color: Colors.buttonText },
 });
 
 export default VerifyYourCode;
-

@@ -35,6 +35,10 @@ export interface InputProps extends TextInputProps {
    * @default true
    */
   showErrorText?: boolean;
+  /**
+   * Optional style for the label text
+   */
+  labelStyle?: TextStyle;
 }
 
 /**
@@ -78,11 +82,12 @@ export const Input: React.FC<InputProps> = ({
   placeholderTextColor = Colors.textPlaceholder,
   error,
   showErrorText = true,
+  labelStyle,
   ...props
 }) => {
   return (
     <View style={[styles.wrapper, size === 'half' && styles.wrapperHalf]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
       <TextInput
         style={[
           styles.base,

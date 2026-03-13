@@ -36,6 +36,10 @@ export interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntr
    * @default true
    */
   showErrorText?: boolean;
+  /**
+   * Optional style for the label text
+   */
+  labelStyle?: TextStyle;
 }
 
 /**
@@ -78,6 +82,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   placeholderTextColor = Colors.textPlaceholder,
   error,
   showErrorText = true,
+  labelStyle,
   ...props
 }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -95,7 +100,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
       <View style={[styles.container, styles[size], containerStyleWithoutBg]}>
         <TextInput
           style={[

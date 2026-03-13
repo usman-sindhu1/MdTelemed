@@ -5,7 +5,7 @@ import * as yup from 'yup';
  * Set to false to disable all validation
  * Change this one value to turn validation on/off for all screens
  */
-export const VALIDATION_ENABLED = true;
+export const VALIDATION_ENABLED = false;
 
 /**
  * Sign In Validation Schema
@@ -26,15 +26,15 @@ export const signInSchema = yup.object().shape({
  */
 export const signUpSchema = yup.object().shape({
   firstName: yup.string().required('First name is required'),
-  lastName: yup.string().required('Last name is required'),
+  lastName: yup.string().optional().default(''),
   email: yup
     .string()
     .required('Email is required')
     .email('Please enter a valid email address'),
-  dateOfBirth: yup.string().required('Date of birth is required'),
-  gender: yup.string().required('Gender is required'),
+  dateOfBirth: yup.string().optional().default(''),
+  gender: yup.string().optional().default(''),
   phone: yup.string().required('Phone number is required'),
-  address: yup.string().required('Address is required'),
+  address: yup.string().optional().default(''),
   password: yup
     .string()
     .required('Password is required')

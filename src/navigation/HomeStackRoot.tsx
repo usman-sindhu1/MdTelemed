@@ -21,6 +21,11 @@ import HelpAndFaqs from '../screens/drawerScreens/HelpAndFaqs';
 import TermsAndConditions from '../screens/drawerScreens/TermsAndConditions';
 import PrivacyPolicy from '../screens/drawerScreens/PrivacyPolicy';
 import Language from '../screens/drawerScreens/Language';
+import BookAppt from '../screens/BookAppt';
+import BookApptSelectDoctor from '../screens/BookApptSelectDoctor';
+import BookApptSelectTimeslot from '../screens/BookApptSelectTimeslot';
+import BookApptPatientSummary from '../screens/BookApptPatientSummary';
+import BookApptPaymentInfo from '../screens/BookApptPaymentInfo';
 
 export type DrawerParamList = {
   MainTabs: undefined;
@@ -40,6 +45,11 @@ export type DrawerParamList = {
   TermsAndConditions: undefined;
   PrivacyPolicy: undefined;
   Language: undefined;
+  BookAppt: undefined;
+  BookApptSelectDoctor: undefined;
+  BookApptSelectTimeslot: undefined;
+  BookApptPatientSummary: undefined;
+  BookApptPaymentInfo: undefined;
 };
 
 export type RootStackParamList = {
@@ -74,6 +84,11 @@ const HomeStackRoot = () => {
               }}
             >
               <Drawer.Screen name="MainTabs" component={BottomTabNavigator} />
+              <Drawer.Screen name="BookAppt" component={BookAppt} />
+              <Drawer.Screen name="BookApptSelectDoctor" component={BookApptSelectDoctor} />
+              <Drawer.Screen name="BookApptSelectTimeslot" component={BookApptSelectTimeslot} />
+              <Drawer.Screen name="BookApptPatientSummary" component={BookApptPatientSummary} />
+              <Drawer.Screen name="BookApptPaymentInfo" component={BookApptPaymentInfo} />
               <Drawer.Screen name="Invoices" component={Invoices} />
               <Drawer.Screen name="InvoiceDetails" component={InvoiceDetails} />
               <Drawer.Screen name="RatingsAndReviews" component={RatingsAndReviews} />
