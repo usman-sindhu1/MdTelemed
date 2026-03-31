@@ -1,394 +1,93 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { CommonActions } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import { useNavigation, useRoute, DrawerActions } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Button from '../../components/Button';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
-import Icons from '../../assets/svg';
-import { DrawerParamList } from '../../navigation/HomeStackRoot';
+import type { DrawerParamList } from '../../navigation/HomeStackRoot';
 
-type DoctorDetailsNavigationProp = NativeStackNavigationProp<
-  DrawerParamList,
-  'DoctorDetails'
->;
+type DoctorDetailsNavigationProp = NativeStackNavigationProp<DrawerParamList, 'DoctorDetails'>;
+type DoctorDetailsRouteProp = RouteProp<DrawerParamList, 'DoctorDetails'>;
 
 const DoctorDetails: React.FC = () => {
   const navigation = useNavigation<DoctorDetailsNavigationProp>();
-  const screenWidth = Dimensions.get('window').width;
-
-  const doctorData = {
-    id: '5646543',
-    name: 'Dr. Ayesha Noor',
-    specialty: 'Allergist',
-    type: 'Individual',
-    rating: 5.4,
-    price: '$45.00',
-    description: 'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna.',
-    education: ['M.B.B.S', 'F.C.P.S'],
-    specialistIn: 'Allergist Specialist',
-    ageGroup: '8-16 years',
-    language: 'English, Spanish',
-    fundingOptions: 'Cash & Card',
-    serviceDelivery: 'Immidiate',
-    specialInterest: [
-      'Developmental Language Disorder (DLD)',
-      'Literacy',
-      'Articulation',
-      'Supporting autistic individuals',
-      'Parent and caregiver coaching',
-      'Early language supports',
-      'Social Skills',
-    ],
-    image: Icons.DoctorImage1,
+  const route = useRoute<DoctorDetailsRouteProp>();
+  const doctorData = route.params?.selectedDoctor ?? {
+    id: '1',
+    name: 'Dr. Sarah Johnson',
+    specialty: 'Allergies',
+    rating: '4.8',
+    years: '12 years',
+    patients: '1.2k patients',
+    fee: '$50',
+    imageUri: 'https://randomuser.me/api/portraits/women/44.jpg',
   };
 
   const handleBackPress = () => {
-    navigation.goBack();
+    navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSelectContinue = () => {
-    // Navigate to BookingAvailableSlot in the Calendar (Appointments) stack
-    navigation.navigate('Calendar' as any, { screen: 'BookingAvailableSlot' });
+  const handleContinue = () => {
+    navigation.navigate('BookAppt', {
+      selectedDoctor: doctorData,
+      preselectedCategoryId: doctorData.specialty.toLowerCase(),
+    });
   };
-
-  const handleCancel = () => {
-    navigation.goBack();
-  };
-
-  const DoctorImage = doctorData.image;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          <BackHeader onBackPress={handleBackPress} />
-
-          {/* Title */}
-          <Text style={styles.heading}>Doctor Details</Text>
-
-          {/* Doctor Profile Card */}
-          <View style={styles.profileCard}>
-            <View style={styles.imageContainer}>
-              <DoctorImage width={screenWidth - 30} height={300} preserveAspectRatio="xMidYMid slice" />
-              <View style={styles.ratingBadge}>
-                <Icons.Star1Icon width={12} height={12} fill="#FFFFFF" />
-                <Text style={styles.ratingText}>Ratings: {doctorData.rating}</Text>
-              </View>
-              <View style={styles.idBadge}>
-                <Text style={styles.idText}>ID: {doctorData.id}</Text>
-              </View>
-            </View>
-            <View style={styles.profileContent}>
-              <Text style={styles.specialtyText}>
-                {doctorData.specialty} - {doctorData.type}
-              </Text>
-              <View style={styles.namePriceRow}>
-                <Text style={styles.doctorName}>{doctorData.name}</Text>
-                <Text style={styles.priceText}>{doctorData.price}</Text>
-              </View>
-              <Text style={styles.descriptionText}>{doctorData.description}</Text>
-            </View>
-          </View>
-
-          {/* Education Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Education</Text>
-            <View style={styles.educationContainer}>
-              {doctorData.education.map((degree, index) => (
-                <React.Fragment key={index}>
-                  <Text style={styles.degreeText}>{degree}</Text>
-                  {index < doctorData.education.length - 1 && (
-                    <Text style={styles.separator}>|</Text>
-                  )}
-                </React.Fragment>
-              ))}
-            </View>
-          </View>
-
-          {/* Other Details Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Other Details</Text>
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Specialist in:</Text>
-                <Text style={styles.detailValue}>{doctorData.specialistIn}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Age group:</Text>
-                <Text style={styles.detailValue}>{doctorData.ageGroup}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Language:</Text>
-                <Text style={styles.detailValue}>{doctorData.language}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Funding options:</Text>
-                <Text style={styles.detailValue}>{doctorData.fundingOptions}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Service delivery:</Text>
-                <Text style={styles.detailValue}>{doctorData.serviceDelivery}</Text>
-              </View>
-              <View style={styles.specialInterestRow}>
-                <Text style={styles.detailLabel}>Special interest area:</Text>
-                <Text style={styles.interestText}>
-                  {doctorData.specialInterest.join(', ')}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.selectButton}
-          onPress={handleSelectContinue}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.selectButtonText}>Select & Continue</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={handleCancel}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.headerContainer}>
+        <SimpleBackHeader
+          title="Doctor Details"
+          onBackPress={handleBackPress}
+          backgroundColor="#ECF2FD"
+        />
       </View>
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.profileCard}>
+          <Image source={{ uri: doctorData.imageUri }} style={styles.image} />
+          <Text style={styles.name}>{doctorData.name}</Text>
+          <Text style={styles.specialty}>{doctorData.specialty}</Text>
+          <Text style={styles.meta}>
+            {doctorData.rating} rating  |  {doctorData.years}  |  {doctorData.patients}
+          </Text>
+          <Text style={styles.fee}>Consultation Fee: {doctorData.fee}</Text>
+          <Text style={styles.about}>
+            Experienced specialist available for quick and scheduled consultations.
+            Continue to appointment flow with this doctor pre-selected.
+          </Text>
+        </View>
+
+        <Button title="Continue to Appointment" onPress={handleContinue} style={styles.primaryBtn} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 150,
-  },
-  content: {
-    paddingHorizontal: 15,
-  },
-  heading: {
-    fontFamily: Fonts.raleway,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginTop: 24,
-    marginBottom: 24,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  headerContainer: { backgroundColor: '#FFFFFF', zIndex: 10 },
+  content: { padding: 15, paddingBottom: 30 },
   profileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 24,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
-  },
-  imageContainer: {
-    width: '100%',
-    height: 300,
-    position: 'relative',
-    overflow: 'hidden',
-    backgroundColor: Colors.backgroundLight,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: '#A473E5',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    zIndex: 2,
-    alignSelf: 'flex-start',
-  },
-  ratingText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  idBadge: {
-    position: 'absolute',
-    top: 50,
-    left: 12,
-    backgroundColor: '#A473E5',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    zIndex: 2,
-    alignSelf: 'flex-start',
-  },
-  idText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  profileContent: {
+    borderColor: '#E5E7EB',
     padding: 16,
-    gap: 12,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 16,
   },
-  specialtyText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-  },
-  namePriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  doctorName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  priceText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#A473E5',
-  },
-  descriptionText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-    lineHeight: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 12,
-  },
-  educationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  degreeText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-  },
-  separator: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textLight,
-  },
-  detailsContainer: {
-    gap: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  detailLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textLight,
-    minWidth: 120,
-  },
-  detailValue: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-    flex: 1,
-    marginLeft: 4,
-  },
-  specialInterestRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  interestText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-    lineHeight: 20,
-    flex: 1,
-    marginLeft: 4,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 15,
-    paddingBottom: 20,
-    paddingTop: 12,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-    gap: 12,
-  },
-  selectButton: {
-    width: '100%',
-    height: 52,
-    borderRadius: 80,
-    backgroundColor: '#A473E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectButtonText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  cancelButton: {
-    width: '100%',
-    height: 52,
-    borderRadius: 80,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
+  image: { width: '100%', height: 220, borderRadius: 14, marginBottom: 14 },
+  name: { fontFamily: Fonts.raleway, fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  specialty: { fontFamily: Fonts.openSans, fontSize: 16, fontWeight: '400', color: '#6B7280', marginBottom: 8 },
+  meta: { fontFamily: Fonts.openSans, fontSize: 14, fontWeight: '600', color: '#64748B', marginBottom: 10 },
+  fee: { fontFamily: Fonts.raleway, fontSize: 16, fontWeight: '700', color: Colors.primary, marginBottom: 10 },
+  about: { fontFamily: Fonts.openSans, fontSize: 14, fontWeight: '400', color: '#475569', lineHeight: 20 },
+  primaryBtn: { backgroundColor: Colors.primary },
 });
 
 export default DoctorDetails;

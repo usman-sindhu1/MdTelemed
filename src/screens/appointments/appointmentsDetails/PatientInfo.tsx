@@ -19,7 +19,6 @@ const PatientInfoTab: React.FC = () => {
   const contactInfo = {
     contactNo: '+1 (234) 567-8900',
     email: 'emilie.corner@gmail.com',
-    location: '4517 Washington Ave. Manchester, Kentucky 39495',
   };
 
   const InfoRow = ({ label, value }: { label: string; value: string }) => (
@@ -46,10 +45,6 @@ const PatientInfoTab: React.FC = () => {
         <Text style={styles.sectionTitle}>Contact Info</Text>
         <InfoRow label="Contact no:" value={contactInfo.contactNo} />
         <InfoRow label="Email:" value={contactInfo.email} />
-        <View style={styles.locationRow}>
-          <Text style={styles.infoLabel}>Location:</Text>
-          <Text style={styles.locationValue}>{contactInfo.location}</Text>
-        </View>
       </View>
     </View>
   );
@@ -87,18 +82,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: Colors.textPrimary,
     marginLeft: 4,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  locationValue: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-    flex: 1,
   },
 });
 

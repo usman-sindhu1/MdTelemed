@@ -6,32 +6,35 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import Icons from '../../assets/svg';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 
-const LOOKING_FOR_ITEMS = [
-  { id: '1', label: 'Get Your Medication', Icon: Icons.MedicineBottleIcon },
-  { id: '2', label: 'Get Medical Certificate', Icon: Icons.CertificateSolidIcon },
-  { id: '3', label: 'Book a Service', Icon: Icons.BxTestTubeIcon },
-  { id: '4', label: 'Test Results', Icon: Icons.ClipboardListSolidIcon },
+export const HOME_CATEGORIES = [
+  { id: 'all', label: 'All' },
+  { id: 'allergies', label: 'Allergies' },
+  { id: 'dermatology', label: 'Dermatology' },
+  { id: 'neurology', label: 'Neurology' },
+  { id: 'gastroenterology', label: 'Gastroenterology' },
 ];
 
-const IAmLookingFor: React.FC = () => {
-  const handleViewAll = () => {
-    // Navigate or expand - add as needed
-  };
+interface IAmLookingForProps {
+  selectedCategoryId: string;
+  onCategoryChange: (id: string) => void;
+  onSeeAllPress?: () => void;
+}
 
-  const handleCardPress = (id: string) => {
-    console.log('Looking for card pressed:', id);
-  };
+const IAmLookingFor: React.FC<IAmLookingForProps> = ({
+  selectedCategoryId,
+  onCategoryChange,
+  onSeeAllPress,
+}) => {
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>I am Looking for</Text>
-        <TouchableOpacity onPress={handleViewAll} activeOpacity={0.7}>
-          <Text style={styles.viewAllText}>View All</Text>
+        <Text style={styles.title}>Categories</Text>
+        <TouchableOpacity activeOpacity={0.7} onPress={onSeeAllPress}>
+          <Text style={styles.viewAllText}>See All</Text>
         </TouchableOpacity>
       </View>
 
@@ -41,21 +44,24 @@ const IAmLookingFor: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
       >
-        {LOOKING_FOR_ITEMS.map((item) => (
+        {HOME_CATEGORIES.map((item) => {
+          const isSelected = selectedCategoryId === item.id;
+          return (
           <TouchableOpacity
             key={item.id}
-            style={styles.card}
-            onPress={() => handleCardPress(item.id)}
+            style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+            onPress={() => onCategoryChange(item.id)}
             activeOpacity={0.8}
           >
-            <View style={styles.iconWrap}>
-              <item.Icon width={28} height={28} />
-            </View>
-            <Text style={styles.cardLabel} numberOfLines={2}>
+            <Text
+              style={[styles.categoryLabel, isSelected && styles.categoryLabelSelected]}
+              numberOfLines={1}
+            >
               {item.label}
             </Text>
           </TouchableOpacity>
-        ))}
+        );
+        })}
       </ScrollView>
     </View>
   );
@@ -63,59 +69,57 @@ const IAmLookingFor: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 24,
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
   title: {
     fontFamily: Fonts.raleway,
-    fontSize: 20,
+    fontSize: 38 / 2,
     fontWeight: '700',
-    color: Colors.textPrimary || '#1F2937',
+    color: Colors.textPrimary,
   },
   viewAllText: {
     fontFamily: Fonts.raleway,
     fontSize: 14,
-    fontWeight: '600',
-    color: Colors.primary || '#2563EB',
+    fontWeight: '700',
+    color: Colors.primary,
   },
   scrollView: {
     marginHorizontal: -15,
   },
   scrollContent: {
     paddingHorizontal: 15,
-    paddingRight: 27,
+    paddingRight: 16,
   },
-  card: {
-    width: 110,
+  categoryChip: {
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     marginRight: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ECF2FD',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  cardLabel: {
+  categoryChipSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  categoryLabel: {
     fontFamily: Fonts.raleway,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#757575',
-    textAlign: 'center',
-    lineHeight: 18,
+    color: '#6B7280',
+  },
+  categoryLabelSelected: {
+    color: '#FFFFFF',
   },
 });
 

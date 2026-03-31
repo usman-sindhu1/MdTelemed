@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Colors from '../../constants/colors';
@@ -16,27 +17,56 @@ interface Appointment {
   doctorName: string;
   doctorImageUri?: string;
   specialty: string;
-  patientType: string;
   date: string;
   time: string;
-  status: string;
+  status: 'Upcoming' | 'Attended' | 'Cancelled' | 'Draft';
 }
 
 const UpcommingAppointments: React.FC = () => {
   const navigation = useNavigation<any>();
 
-  // Sample data - replace with actual data source
   const appointments: Appointment[] = [
     {
       id: '5646543',
-      doctorName: 'Cody Fisher',
-      specialty: 'Skin care',
-      patientType: 'For my self',
-      date: 'Jan 22, 2025',
-      time: '11:00 am',
-      status: 'Paid',
+      doctorName: 'Dr. Sarah Johnson',
+      doctorImageUri: 'https://randomuser.me/api/portraits/women/44.jpg',
+      specialty: 'Cardiologist',
+      date: 'Mar 31, 2026',
+      time: '10:00 AM',
+      status: 'Upcoming',
+    },
+    {
+      id: '5646544',
+      doctorName: 'Dr. Emily Carter',
+      doctorImageUri: 'https://randomuser.me/api/portraits/women/68.jpg',
+      specialty: 'Neurologist',
+      date: 'Apr 02, 2026',
+      time: '9:45 AM',
+      status: 'Upcoming',
+    },
+    {
+      id: '5646545',
+      doctorName: 'Dr. Michael Chen',
+      doctorImageUri: 'https://randomuser.me/api/portraits/men/32.jpg',
+      specialty: 'Dermatologist',
+      date: 'Apr 05, 2026',
+      time: '2:30 PM',
+      status: 'Upcoming',
+    },
+    {
+      id: '5646546',
+      doctorName: 'Dr. James Lee',
+      doctorImageUri: 'https://randomuser.me/api/portraits/men/75.jpg',
+      specialty: 'Gastroenterologist',
+      date: 'Mar 20, 2026',
+      time: '4:15 PM',
+      status: 'Cancelled',
     },
   ];
+
+  const upcomingAppointments = appointments
+    .filter((appointment) => appointment.status === 'Upcoming')
+    .slice(0, 3);
 
   const handleViewAll = () => {
     // Navigate to Appointments screen in the Calendar (Appointments) stack
@@ -47,83 +77,67 @@ const UpcommingAppointments: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Upcoming Appointments</Text>
+        <Text style={styles.title}>Upcoming Appointment</Text>
         <TouchableOpacity onPress={handleViewAll} activeOpacity={0.7}>
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={styles.viewAllText}>See All</Text>
         </TouchableOpacity>
       </View>
 
       {/* Appointment Cards */}
-      <View style={styles.cardsContainer}>
-        {appointments.map((appointment) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.cardsContainer}
+      >
+        {upcomingAppointments.map((appointment) => (
           <View key={appointment.id} style={styles.card}>
-            {/* ID and Status Labels */}
-            <View style={styles.labelRow}>
-              <View style={styles.idLabel}>
-                <Text style={styles.idText}>ID: {appointment.id}</Text>
+            <View style={styles.topRow}>
+              <View style={styles.imageShell}>
+                {appointment.doctorImageUri ? (
+                  <Image source={{ uri: appointment.doctorImageUri }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.placeholderImage} />
+                )}
               </View>
-              <View style={styles.statusLabel}>
-                <Text style={styles.statusText}>{appointment.status}</Text>
-              </View>
-            </View>
-
-            {/* Doctor Information */}
-            <View style={styles.doctorSection}>
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorLabel}>Doctor name</Text>
-                <View style={styles.doctorContent}>
-                  <View style={styles.outerBorderContainer}>
-                    <View style={styles.borderContainer}>
-                      <View style={styles.imageContainer}>
-                        {appointment.doctorImageUri ? (
-                          <Image
-                            source={{ uri: appointment.doctorImageUri }}
-                            style={styles.profileImage}
-                          />
-                        ) : (
-                          <View style={styles.placeholderImage} />
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                  <Text style={styles.doctorName}>{appointment.doctorName}</Text>
-                </View>
+              <View style={styles.doctorTextWrap}>
+                <Text style={styles.doctorName} numberOfLines={1}>
+                  {appointment.doctorName}
+                </Text>
+                <Text style={styles.specialty} numberOfLines={1}>
+                  {appointment.specialty}
+                </Text>
               </View>
             </View>
 
-            {/* Appointment Details */}
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailsRow}>
+            <View style={styles.bottomRow}>
+              <View style={styles.datetimeWrap}>
                 <View style={styles.detailItem}>
-                  <Icons.ServiceIcon width={16} height={16} stroke={Colors.textSecondary} />
-                  <Text style={styles.detailText}>{appointment.specialty}</Text>
+                  <Icons.CalendarTodayIcon width={20} height={20} />
+                  <Text style={styles.detailText} numberOfLines={1}>
+                    {appointment.date}
+                  </Text>
                 </View>
                 <View style={styles.detailItem}>
-                  <Icons.VectorIcon width={16} height={16} fill={Colors.textSecondary} />
-                  <Text style={styles.detailText}>{appointment.patientType}</Text>
+                  <Icons.NestClockFarsightAnalogIcon width={20} height={20} />
+                  <Text style={styles.detailText} numberOfLines={1}>
+                    {appointment.time}
+                  </Text>
                 </View>
               </View>
-              <View style={styles.detailsRow}>
-                <View style={styles.detailItem}>
-                  <Icons.VectorIcon width={16} height={16} fill={Colors.textSecondary} />
-                  <Text style={styles.detailText}>{appointment.date}</Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Icons.CalendarAltIcon width={16} height={16} fill={Colors.textSecondary} />
-                  <Text style={styles.detailText}>{appointment.time}</Text>
-                </View>
+              <View style={styles.statusPill}>
+                <Text style={styles.statusText}>upcoming</Text>
               </View>
             </View>
           </View>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 32,
+    marginTop: 20,
     marginBottom: 24,
   },
   header: {
@@ -135,7 +149,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: Fonts.raleway,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
@@ -146,138 +160,96 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   cardsContainer: {
-    width: '100%',
+    paddingRight: 8,
+    gap: 12,
   },
   card: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    width: 350,
+    backgroundColor: '#EEEFF3',
+    borderRadius: 28,
     padding: 16,
-    width: '100%',
-    minHeight: 200,
+    minHeight: 156,
   },
-  labelRow: {
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
-  idLabel: {
-    backgroundColor: "#D1B9F2",
+  imageShell: {
+    width: 84,
+    height: 84,
     borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  idText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  statusLabel: {
-    backgroundColor: '#F0E8FB',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  statusText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-  },
-  doctorSection: {
-    marginBottom: 16,
-  },
-  doctorLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: "#9E9E9E",
-    marginBottom: 8,
-  },
-  doctorInfo: {
-    backgroundColor: '#EBEBEB',
-    borderRadius: 8,
-    padding: 12,
-  },
-  doctorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  outerBorderContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    // iOS shadow
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    // Android shadow
-    elevation: 4,
-  },
-  borderContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
     overflow: 'hidden',
-  },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 22,
-    backgroundColor: Colors.backgroundLight,
-    overflow: 'hidden',
+    marginRight: 14,
+    backgroundColor: '#DDE3EA',
   },
   profileImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-    borderRadius: 22,
   },
   placeholderImage: {
     width: '100%',
     height: '100%',
     backgroundColor: Colors.primaryLight,
-    borderRadius: 22,
+  },
+  doctorTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 4,
   },
   doctorName: {
     fontFamily: Fonts.raleway,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textSecondary,
-    flex: 1,
+    color: '#111827',
+    marginBottom: 2,
   },
-  detailsContainer: {
-    gap: 12,
+  specialty: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#6B7280',
   },
-  detailsRow: {
+  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    alignItems: 'flex-start',
+  },
+  datetimeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+    minWidth: 0,
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primary,
+  },
+  statusText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'lowercase',
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: 8,
+    gap: 6,
+    minWidth: 0,
   },
   detailText: {
     fontFamily: Fonts.openSans,
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '400',
-    color: Colors.textSecondary,
-    flex: 1,
+    color: '#6B7280',
+    flexShrink: 1,
   },
 });
 

@@ -11,7 +11,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
@@ -36,14 +35,6 @@ const MedicalInfo: React.FC = () => {
 
   const handleBackPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
-  };
-
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
   };
 
   const handleEditPress = () => {
@@ -159,15 +150,20 @@ const MedicalInfo: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Fixed Header */}
       <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
+        <View style={[styles.headerRow, { paddingTop: insets.top + 6 }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBackPress}
+            activeOpacity={0.7}
+          >
+            <Icons.Back width={22} height={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Medical History</Text>
+          <View style={styles.headerRight} />
+        </View>
       </View>
 
       <ScrollView
@@ -198,9 +194,6 @@ const MedicalInfo: React.FC = () => {
         scrollEventThrottle={16}
       >
         <View style={styles.content}>
-          {/* Title */}
-          <Text style={styles.heading}>Medical History</Text>
-
           {/* Tabs */}
           <View style={styles.tabsContainer}>
             <TouchableOpacity
@@ -281,10 +274,35 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
+    backgroundColor: '#ECF2FD',
     zIndex: 10,
+    paddingHorizontal: 16,
     paddingBottom: 8,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  headerRight: {
+    width: 36,
+    height: 36,
   },
   scrollContent: {
     flexGrow: 1,
@@ -305,6 +323,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundLight,
     borderRadius: 20,
     padding: 4,
+    marginTop: 12,
     marginBottom: 24,
     gap: 8,
   },
@@ -317,7 +336,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabActive: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
   },
   tabText: {
     fontFamily: Fonts.raleway,
@@ -396,7 +415,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statusBadge: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -435,7 +454,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F0E8FB',
+    backgroundColor: '#ECF2FD',
     justifyContent: 'center',
     alignItems: 'center',
   },

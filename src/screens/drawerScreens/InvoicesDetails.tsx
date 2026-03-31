@@ -6,7 +6,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import BackHeader from '../../components/common/BackHeader';
 import Colors from '../../constants/colors';
@@ -58,7 +58,7 @@ const InvoiceDetails: React.FC = () => {
   const grandTotal = '$219.00';
 
   const handleBackPress = () => {
-    navigation.navigate('Invoices');
+    navigation.dispatch(DrawerActions.openDrawer());
   };
 
   const handleSearchPress = () => {

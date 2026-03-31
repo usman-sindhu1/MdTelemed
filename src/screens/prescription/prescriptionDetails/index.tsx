@@ -1,19 +1,25 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import BackHeader from '../../../components/common/BackHeader';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
+import Icons from '../../../assets/svg';
 
 const PrescriptionDetails: React.FC = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const searchAnim = useRef(new Animated.Value(0)).current;
 
   const prescriptionData = {
     service: 'Skin Care',
@@ -50,16 +56,24 @@ const PrescriptionDetails: React.FC = () => {
 
   const advice = 'Avoid oily and spicy foods.';
 
+  useEffect(() => {
+    Animated.timing(searchAnim, {
+      toValue: isSearchActive ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [isSearchActive, searchAnim]);
+
   const handleBackPress = () => {
     navigation.goBack();
   };
 
   const handleSearchPress = () => {
-    console.log('Search pressed');
+    setIsSearchActive(true);
   };
 
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+  const handleCloseSearch = () => {
+    setIsSearchActive(false);
   };
 
   const handleDownloadPress = () => {
@@ -67,14 +81,62 @@ const PrescriptionDetails: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerContent}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.headerBlock}>
+        <View style={[styles.headerContent, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.headerActionsRow}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={handleBackPress}
+              activeOpacity={0.7}
+            >
+              <Icons.Vector1Icon width={22} height={22} />
+            </TouchableOpacity>
+            {!isSearchActive && (
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={handleSearchPress}
+                activeOpacity={0.7}
+              >
+                <Icons.Search width={20} height={20} />
+              </TouchableOpacity>
+            )}
+            {isSearchActive && (
+              <Animated.View
+                style={[
+                  styles.searchBar,
+                  {
+                    opacity: searchAnim,
+                    transform: [
+                      {
+                        translateX: searchAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [80, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Icons.Search width={18} height={18} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search"
+                  placeholderTextColor="#9CA3AF"
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={handleCloseSearch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -84,6 +146,9 @@ const PrescriptionDetails: React.FC = () => {
       >
         <View style={styles.content}>
           <Text style={styles.title}>Prescription Details</Text>
+          <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadPress} activeOpacity={0.8}>
+            <Text style={styles.downloadBtnText}>Download Prescription</Text>
+          </TouchableOpacity>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Service:</Text>
@@ -138,8 +203,8 @@ const PrescriptionDetails: React.FC = () => {
             ))}
           </View>
 
-          {/* Advise Given */}
-          <Text style={styles.sectionTitle}>Advise Given</Text>
+          {/* Medication Instructions */}
+          <Text style={styles.sectionTitle}>Medication Instructions</Text>
           <Text style={styles.adviceText}>{advice}</Text>
         </View>
       </ScrollView>
@@ -152,8 +217,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  headerBlock: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
   headerContent: {
     paddingHorizontal: 15,
+    paddingBottom: 14,
+  },
+  headerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    marginHorizontal: 8,
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    paddingVertical: 0,
+  },
+  cancelText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -172,6 +286,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: 8,
+  },
+  downloadBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginTop: -4,
+  },
+  downloadBtnText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   infoRow: {
     flexDirection: 'row',
@@ -192,14 +322,14 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   doctorCard: {
-    backgroundColor: '#F0E8FB',
+    backgroundColor: '#F1F5F9',
     borderRadius: 12,
     padding: 16,
     gap: 12,
     marginTop: 8,
   },
   idLabel: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,13 @@ interface NotificationData {
   message: string;
   date: string;
   time: string;
-  type: string;
+  type: 'Appointment' | 'Payment' | 'Prescription' | 'Push';
   isRead: boolean;
 }
 
 const Notifications: React.FC = () => {
   const navigation = useNavigation();
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Appointment' | 'Payment' | 'Prescription' | 'Push'>('All');
 
   const notifications: NotificationData[] = [
     {
@@ -54,52 +55,107 @@ const Notifications: React.FC = () => {
       type: 'Payment',
       isRead: true,
     },
+    {
+      id: '4',
+      title: 'Push Notifications Enabled',
+      message: 'Firebase push notifications are active. You will receive reminders and prescription updates.',
+      date: 'Jan 20, 2025',
+      time: '08:20 AM',
+      type: 'Push',
+      isRead: true,
+    },
   ];
 
   const handleMenuPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
   const handleSearchChange = (text: string) => {
     console.log('Search text:', text);
   };
 
+  const handleAIChatPress = () => {
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Chat' as never);
+      return;
+    }
+    navigation.navigate('Chat' as never);
+  };
+
   const handleNotificationPress = (notification: NotificationData) => {
     console.log('Notification pressed:', notification);
-    // TODO: Handle notification press
+  };
+
+  const filteredNotifications = useMemo(() => {
+    if (activeFilter === 'All') {
+      return notifications;
+    }
+    return notifications.filter((item) => item.type === activeFilter);
+  }, [activeFilter, notifications]);
+
+  const getTypeStyle = (type: NotificationData['type']) => {
+    switch (type) {
+      case 'Appointment':
+        return styles.typeAppointment;
+      case 'Payment':
+        return styles.typePayment;
+      case 'Prescription':
+        return styles.typePrescription;
+      case 'Push':
+        return styles.typePush;
+      default:
+        return styles.typeAppointment;
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <HomeHeader
-          onMenuPress={handleMenuPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-        />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerContainer}>
+            <HomeHeader
+              onProfilePress={handleMenuPress}
+              onSearchChange={handleSearchChange}
+              onAIChatPress={handleAIChatPress}
+              placeholder="Search notifications"
+              showFeelingRow={false}
+              showNotificationIcon={false}
+            />
+          </View>
+          <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
             <Text style={styles.heading}>Notifications</Text>
             <Text style={styles.description}>
-              All of your notifications and updates from the app will appear here.
+              Appointment reminders, payment confirmations, prescription updates, and push notification status.
             </Text>
+          </View>
+
+          <View style={styles.filterRow}>
+            {(['All', 'Appointment', 'Payment', 'Prescription', 'Push'] as const).map((filter) => {
+              const isActive = activeFilter === filter;
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  style={[styles.filterChip, isActive && styles.filterChipActive]}
+                  onPress={() => setActiveFilter(filter)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* Notification Cards */}
           <View style={styles.cardsContainer}>
-            {notifications.map((notification) => (
+            {filteredNotifications.map((notification) => (
               <TouchableOpacity
                 key={notification.id}
                 style={[
@@ -110,7 +166,7 @@ const Notifications: React.FC = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.cardHeader}>
-                  <View style={styles.typeLabel}>
+                  <View style={[styles.typeLabel, getTypeStyle(notification.type)]}>
                     <Text style={styles.typeText}>{notification.type}</Text>
                   </View>
                   <View style={styles.dateLabel}>
@@ -127,9 +183,10 @@ const Notifications: React.FC = () => {
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -138,10 +195,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
+  scrollWrapper: {
+    flex: 1,
     backgroundColor: Colors.background,
-    zIndex: 10,
+  },
+  headerContainer: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 0,
   },
   scrollContent: {
     flexGrow: 1,
@@ -171,15 +234,66 @@ const styles = StyleSheet.create({
   cardsContainer: {
     gap: 16,
   },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterChip: {
+    borderRadius: 16,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterChipText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  pushStatusCard: {
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: 12,
+    marginBottom: 16,
+  },
+  pushStatusTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  pushStatusText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#475569',
+    lineHeight: 18,
+  },
   notificationCard: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   unreadCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -187,10 +301,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   typeLabel: {
-    backgroundColor: '#A473E5',
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
+  },
+  typeAppointment: {
+    backgroundColor: Colors.primary,
+  },
+  typePayment: {
+    backgroundColor: '#16A34A',
+  },
+  typePrescription: {
+    backgroundColor: '#7C3AED',
+  },
+  typePush: {
+    backgroundColor: '#0EA5E9',
   },
   typeText: {
     fontFamily: Fonts.raleway,
@@ -199,7 +324,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   dateLabel: {
-    backgroundColor: '#F0E8FB',
+    backgroundColor: '#EEF2FF',
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -207,8 +332,8 @@ const styles = StyleSheet.create({
   dateText: {
     fontFamily: Fonts.openSans,
     fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textPrimary,
+    fontWeight: '600',
+    color: '#475569',
   },
   notificationContent: {
     gap: 8,

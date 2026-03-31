@@ -38,6 +38,7 @@ const Report: React.FC = () => {
             onMenuPress={handleMenuPress}
             onSearchPress={handleSearchPress}
             onSearchChange={handleSearchChange}
+            showFeelingRow={false}
           />
           
           <View style={styles.headingContainer}>

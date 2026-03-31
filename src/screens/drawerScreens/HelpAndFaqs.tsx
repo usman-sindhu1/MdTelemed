@@ -7,12 +7,11 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
-import Icons from '../../assets/svg';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
 
 type HelpAndFaqsNavigationProp = NativeStackNavigationProp<
@@ -84,15 +83,7 @@ const HelpAndFaqs: React.FC = () => {
   ];
 
   const handleBackPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
-
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+    navigation.navigate('ProfileSettings');
   };
 
   const toggleItem = (id: string) => {
@@ -108,16 +99,8 @@ const HelpAndFaqs: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SimpleBackHeader title="Help & Support" onBackPress={handleBackPress} compact />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -126,7 +109,7 @@ const HelpAndFaqs: React.FC = () => {
         <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
-            <Text style={styles.heading}>Help & FAQs</Text>
+            <Text style={styles.heading}>Help & Support</Text>
             <Text style={styles.description}>
               Find answers to commonly asked questions. Tap on any question to view the answer.
             </Text>
@@ -173,12 +156,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
-    zIndex: 10,
-    paddingBottom: 8,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 100,
@@ -194,8 +171,8 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Fonts.raleway,
     fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '800',
+    color: Colors.primary,
   },
   description: {
     fontFamily: Fonts.openSans,
@@ -248,7 +225,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRightWidth: 2,
     borderBottomWidth: 2,
-    borderColor: Colors.textSecondary,
+    borderColor: Colors.primary,
     transform: [{ rotate: '45deg' }],
   },
   chevronUp: {

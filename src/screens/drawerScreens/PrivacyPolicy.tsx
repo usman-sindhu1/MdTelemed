@@ -6,9 +6,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
@@ -22,28 +22,12 @@ const PrivacyPolicy: React.FC = () => {
   const navigation = useNavigation<PrivacyPolicyNavigationProp>();
 
   const handleBackPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
-
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+    navigation.navigate('ProfileSettings');
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SimpleBackHeader title="Privacy & Security" onBackPress={handleBackPress} compact />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -52,7 +36,7 @@ const PrivacyPolicy: React.FC = () => {
         <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
-            <Text style={styles.heading}>Privacy Policy</Text>
+            <Text style={styles.heading}>Privacy & Security</Text>
             <Text style={styles.lastUpdated}>Last updated: January 17, 2025</Text>
           </View>
 
@@ -159,12 +143,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
-    zIndex: 10,
-    paddingBottom: 8,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 100,
@@ -180,8 +158,8 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Fonts.raleway,
     fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '800',
+    color: Colors.primary,
   },
   lastUpdated: {
     fontFamily: Fonts.openSans,
@@ -199,7 +177,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.raleway,
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: Colors.primary,
   },
   sectionText: {
     fontFamily: Fonts.openSans,

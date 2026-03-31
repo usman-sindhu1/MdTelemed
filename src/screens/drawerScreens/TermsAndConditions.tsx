@@ -6,9 +6,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
@@ -22,28 +22,12 @@ const TermsAndConditions: React.FC = () => {
   const navigation = useNavigation<TermsAndConditionsNavigationProp>();
 
   const handleBackPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
-
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+    navigation.navigate('ProfileSettings');
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SimpleBackHeader title="Terms & Conditions" onBackPress={handleBackPress} compact />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -130,12 +114,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
-    zIndex: 10,
-    paddingBottom: 8,
   },
   scrollContent: {
     flexGrow: 1,

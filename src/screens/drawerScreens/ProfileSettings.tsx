@@ -7,19 +7,15 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Svg, Path, Circle, Rect } from 'react-native-svg';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
-import Icons from '../../assets/svg';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
 
-type ProfileSettingsNavigationProp = NativeStackNavigationProp<
-  DrawerParamList,
-  'ProfileSettings'
->;
+type ProfileSettingsNavigationProp = NativeStackNavigationProp<DrawerParamList, 'ProfileDetails'>;
 
 const ProfileSettings: React.FC = () => {
   const navigation = useNavigation<ProfileSettingsNavigationProp>();
@@ -35,20 +31,11 @@ const ProfileSettings: React.FC = () => {
   };
 
   const handleBackPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
+    navigation.navigate('ProfileSettings');
   };
 
   const handleEditPress = () => {
     console.log('Edit pressed');
-  };
-
-  const handleSharePress = () => {
-    console.log('Share pressed');
-  };
-
-  const handleCopyPress = (text: string) => {
-    console.log('Copy pressed:', text);
-    // TODO: Implement copy to clipboard
   };
 
   const handleEditProfilePicture = () => {
@@ -56,22 +43,15 @@ const ProfileSettings: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SimpleBackHeader title="Profile Settings" onBackPress={handleBackPress} compact />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <BackHeader
-            onBackPress={handleBackPress}
-            onVector2Press={handleEditPress}
-            onVectorPngPress={handleSharePress}
-            showVector2Icon={true}
-            showVectorPngIcon={true}
-          />
-
           {/* Title */}
-          <Text style={styles.heading}>Profile Settings</Text>
+          <Text style={styles.heading}>Profile Details</Text>
 
           {/* Profile Picture Section */}
           <View style={styles.profileSection}>
@@ -214,10 +194,10 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Fonts.raleway,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 20,
   },
   profileSection: {
     alignItems: 'center',
@@ -262,7 +242,7 @@ const styles = StyleSheet.create({
   placeholderImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: '#87B5E8',
     borderRadius: 57,
   },
   editImageButton: {
@@ -272,7 +252,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,

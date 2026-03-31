@@ -1,23 +1,21 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerActions } from '@react-navigation/native';
 import HomeHeader from '../../components/common/HomeHeader';
-import FeaturedSpecialists from '../../components/homecomponents/FeaturedSpecialists';
 import IAmLookingFor from '../../components/homecomponents/IAmLookingFor';
-import WellBeing from '../../components/homecomponents/WellBeing';
 import UpcommingAppointments from '../../components/homecomponents/UpcommingAppointments';
-import OurServices from '../../components/homecomponents/OurServices';
+import TopDoctors from '../../components/homecomponents/TopDoctors';
 import Icons from '../../assets/svg';
 import Colors from '../../constants/colors';
-import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
 import { useScrollContext } from '../../contexts/ScrollContext';
 
@@ -25,6 +23,8 @@ const Home: React.FC = () => {
   const navigation = useNavigation();
   const { setIsScrollingDown } = useScrollContext();
   const scrollY = useRef(0);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleProfilePress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -35,11 +35,20 @@ const Home: React.FC = () => {
   };
 
   const handleAIChatPress = () => {
-    // Navigate to AI Chat / chat screen
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Chat' as never);
+      return;
+    }
     navigation.navigate('Chat' as never);
   };
 
   const handleNotificationPress = () => {
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Notifications' as never);
+      return;
+    }
     navigation.navigate('Notifications' as never);
   };
 
@@ -48,11 +57,19 @@ const Home: React.FC = () => {
   };
 
   const handleStartNow = () => {
-    console.log('Start Now pressed');
+    (navigation.getParent() as any)?.getParent()?.navigate('ImmediateCareUrgentBooking');
   };
 
   const handleSetupForLater = () => {
-    (navigation.getParent() as any)?.getParent()?.navigate('BookAppt');
+    (navigation.getParent() as any)?.getParent()?.navigate('BookAppt', {
+      preselectedCategoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+    });
+  };
+
+  const handleCategoriesSeeAll = () => {
+    (navigation.getParent() as any)?.getParent()?.navigate('BookAppt', {
+      preselectedCategoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
+    });
   };
 
   const handleScroll = (event: any) => {
@@ -70,6 +87,13 @@ const Home: React.FC = () => {
     scrollY.current = currentScrollY;
   };
 
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 900);
+  };
+
 
   return (
     <View style={styles.container}>
@@ -79,6 +103,14 @@ const Home: React.FC = () => {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       >
         {/* Header scrolls with content */}
         <View style={styles.headerContainer}>
@@ -125,9 +157,15 @@ const Home: React.FC = () => {
             </View>
           </View>
 
-          <IAmLookingFor />
+          <UpcommingAppointments />
 
-          <WellBeing />
+          <IAmLookingFor
+            selectedCategoryId={selectedCategoryId}
+            onCategoryChange={setSelectedCategoryId}
+            onSeeAllPress={handleCategoriesSeeAll}
+          />
+
+          <TopDoctors selectedCategoryId={selectedCategoryId} />
         </View>
       </ScrollView>
       </SafeAreaView>

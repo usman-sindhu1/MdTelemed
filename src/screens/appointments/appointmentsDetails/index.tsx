@@ -8,11 +8,11 @@ import {
   Platform,
   Dimensions,
   Animated,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../../components/common/BackHeader';
 import { AppointmentsStackParamList } from '../../../navigation/HomeStack';
 import Button from '../../../components/Button';
 import AppointmentsInfo from './AppointmentsInfo';
@@ -24,6 +24,7 @@ import PrescriptionContent from './PrescriptionContent';
 import Conversation from './Conversation';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
+import Icons from '../../../assets/svg';
 
 type MainTabType = 'Appointment Info' | 'Doctor Info' | 'Patient Info' | 'Medical Info' | 'Reports' | 'Prescription' | 'Conversation';
 
@@ -38,10 +39,13 @@ const AppointmentDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<MainTabType>('Appointment Info');
   const [isScrolling, setIsScrolling] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const tabsScrollViewRef = useRef<ScrollView>(null);
   const contentScrollViewRef = useRef<ScrollView>(null);
   const tabPositions = useRef<{ [key: string]: number }>({});
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const searchAnim = useRef(new Animated.Value(0)).current;
 
   const mainTabs: MainTabType[] = ['Appointment Info', 'Doctor Info', 'Patient Info', 'Medical Info', 'Reports', 'Prescription', 'Conversation'];
 
@@ -50,11 +54,11 @@ const AppointmentDetails: React.FC = () => {
   };
 
   const handleSearchPress = () => {
-    console.log('Search pressed');
+    setIsSearchActive(true);
   };
 
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+  const handleCloseSearch = () => {
+    setIsSearchActive(false);
   };
 
   const handleJoinSession = () => {
@@ -103,6 +107,14 @@ const AppointmentDetails: React.FC = () => {
     }
   }, [isScrolling, isAtBottom]);
 
+  useEffect(() => {
+    Animated.timing(searchAnim, {
+      toValue: isSearchActive ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [isSearchActive, searchAnim]);
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'Appointment Info':
@@ -125,15 +137,65 @@ const AppointmentDetails: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerContent}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.headerBlock}>
+        <View style={[styles.headerContent, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.headerActionsRow}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={handleBackPress}
+              activeOpacity={0.7}
+            >
+              <Icons.Vector1Icon width={22} height={22} />
+            </TouchableOpacity>
+            {!isSearchActive && (
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={handleSearchPress}
+                activeOpacity={0.7}
+              >
+                <Icons.Search width={20} height={20} />
+              </TouchableOpacity>
+            )}
+            {isSearchActive && (
+              <Animated.View
+                style={[
+                  styles.searchBar,
+                  {
+                    opacity: searchAnim,
+                    transform: [
+                      {
+                        translateX: searchAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [80, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Icons.Search width={18} height={18} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search"
+                  placeholderTextColor="#9CA3AF"
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  onPress={handleCloseSearch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+          </View>
+        </View>
+      </View>
 
+      <View style={styles.mainSection}>
         <Text style={styles.title}>Appointment Details</Text>
 
         {/* Main Tabs */}
@@ -243,7 +305,59 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  headerBlock: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
   headerContent: {
+    paddingHorizontal: 15,
+    paddingBottom: 14,
+  },
+  headerActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    marginHorizontal: 8,
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    paddingVertical: 0,
+  },
+  cancelText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  mainSection: {
     paddingHorizontal: 15,
   },
   content: {
@@ -269,16 +383,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   tabActive: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   tabText: {
     fontFamily: Fonts.raleway,
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.textLight,
   },
   tabTextActive: {
     color: '#FFFFFF',

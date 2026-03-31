@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   idLabel: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,

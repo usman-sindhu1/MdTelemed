@@ -14,6 +14,7 @@ import HomeHeader from '../../components/common/HomeHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { PrescriptionStackParamList } from '../../navigation/HomeStack';
+import Icons from '../../assets/svg';
 
 type PrescriptionNavigationProp = NativeStackNavigationProp<
   PrescriptionStackParamList,
@@ -28,6 +29,7 @@ interface PrescriptionData {
   service: string;
   appointmentFor: string;
   medPrescribed: string;
+  instructions: string;
 }
 
 const Prescription: React.FC = () => {
@@ -42,15 +44,17 @@ const Prescription: React.FC = () => {
       service: 'Skin Care',
       appointmentFor: 'My Self',
       medPrescribed: '2',
+      instructions: 'After meals, twice daily',
     },
     {
-      id: '5646543',
-      date: 'Jan 12, 2025',
-      title: 'Prescription Title Here',
-      doctorName: 'Cody Fisher',
-      service: 'Skin Care',
+      id: '5646544',
+      date: 'Jan 18, 2025',
+      title: 'Dermatitis Follow-up',
+      doctorName: 'Dr. Michael Chen',
+      service: 'Dermatology',
       appointmentFor: 'My Self',
-      medPrescribed: '2',
+      medPrescribed: '3',
+      instructions: 'Use ointment morning and night',
     },
   ];
 
@@ -58,12 +62,26 @@ const Prescription: React.FC = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
   const handleSearchChange = (text: string) => {
     console.log('Search text:', text);
+  };
+
+  const handleAIChatPress = () => {
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Chat' as never);
+      return;
+    }
+    navigation.navigate('Chat' as never);
+  };
+
+  const handleNotificationPress = () => {
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Notifications' as never);
+      return;
+    }
+    navigation.navigate('Notifications' as never);
   };
 
   const handleCardPress = (prescription: PrescriptionData) => {
@@ -71,26 +89,28 @@ const Prescription: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <HomeHeader
-          onMenuPress={handleMenuPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-        />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerContainer}>
+            <HomeHeader
+              onProfilePress={handleMenuPress}
+              onSearchChange={handleSearchChange}
+              onAIChatPress={handleAIChatPress}
+              onNotificationPress={handleNotificationPress}
+              placeholder="Search prescription, doctor"
+              showFeelingRow={false}
+            />
+          </View>
+          <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
             <Text style={styles.heading}>My Prescriptions</Text>
             <Text style={styles.description}>
-              All of the prescriptions received by the doctors from the start you've registered till date.
+              Digital prescriptions from your doctors. View, download, and follow medication instructions.
             </Text>
           </View>
 
@@ -108,6 +128,7 @@ const Prescription: React.FC = () => {
                     <Text style={styles.idText}>ID: {prescription.id}</Text>
                   </View>
                   <View style={styles.dateLabel}>
+                    <Icons.CalendarTodayIcon width={14} height={14} />
                     <Text style={styles.dateText}>{prescription.date}</Text>
                   </View>
                 </View>
@@ -118,7 +139,6 @@ const Prescription: React.FC = () => {
                 </View>
 
                 <View style={styles.doctorSection}>
-                  <Text style={styles.sectionLabel}>Doctor name</Text>
                   <View style={styles.doctorInfo}>
                     <View style={styles.outerBorderContainer}>
                       <View style={styles.borderContainer}>
@@ -127,21 +147,49 @@ const Prescription: React.FC = () => {
                         </View>
                       </View>
                     </View>
-                    <Text style={styles.doctorName}>{prescription.doctorName}</Text>
+                    <View style={styles.doctorTextWrap}>
+                      <Text style={styles.sectionLabel}>Doctor</Text>
+                      <Text style={styles.doctorName}>{prescription.doctorName}</Text>
+                    </View>
                   </View>
                 </View>
 
-                <View style={styles.detailsSection}>
-                  <Text style={styles.detailText}>Service: {prescription.service}</Text>
-                  <Text style={styles.detailText}>Appointment for: {prescription.appointmentFor}</Text>
-                  <Text style={styles.detailText}>Med. Prescribed: {prescription.medPrescribed}</Text>
+                <View style={styles.metaRow}>
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>Service: {prescription.service}</Text>
+                  </View>
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>For: {prescription.appointmentFor}</Text>
+                  </View>
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>Meds: {prescription.medPrescribed}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.instructionsCard}>
+                  <Text style={styles.instructionsTitle}>Medication instructions</Text>
+                  <Text style={styles.detailText}>{prescription.instructions}</Text>
+                </View>
+
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.secondaryPill} activeOpacity={0.8}>
+                    <Text style={styles.secondaryPillText}>Download</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.primaryPill}
+                    activeOpacity={0.8}
+                    onPress={() => handleCardPress(prescription)}
+                  >
+                    <Text style={styles.primaryPillText}>View Prescription</Text>
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             ))}
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -150,10 +198,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
+  scrollWrapper: {
+    flex: 1,
     backgroundColor: Colors.background,
-    zIndex: 10,
+  },
+  headerContainer: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 0,
   },
   scrollContent: {
     flexGrow: 1,
@@ -184,10 +238,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   prescriptionCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     padding: 16,
-    gap: 16,
+    gap: 14,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -195,7 +251,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   idLabel: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -207,16 +263,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   dateLabel: {
-    backgroundColor: '#F0E8FB',
+    backgroundColor: '#DBEAFE',
     borderRadius: 20,
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   dateText: {
     fontFamily: Fonts.openSans,
     fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textPrimary,
+    fontWeight: '600',
+    color: Colors.primary,
   },
   prescriptionSection: {
     gap: 8,
@@ -234,10 +293,11 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   doctorSection: {
-    gap: 8,
-    backgroundColor: '#EBEBEB',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   doctorInfo: {
     flexDirection: 'row',
@@ -286,11 +346,78 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.raleway,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
     flex: 1,
   },
-  detailsSection: {
+  doctorTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
+  },
+  metaChip: {
+    borderRadius: 14,
+    backgroundColor: '#EEF2FF',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  metaChipText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  instructionsCard: {
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 10,
+  },
+  instructionsTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  secondaryPill: {
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flex: 1,
+    alignItems: 'center',
+  },
+  secondaryPillText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  primaryPill: {
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: Colors.primary,
+    flex: 1.2,
+    alignItems: 'center',
+  },
+  primaryPillText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   detailText: {
     fontFamily: Fonts.openSans,

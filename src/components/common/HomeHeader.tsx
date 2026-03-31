@@ -22,12 +22,15 @@ interface HomeHeaderProps {
   onSearchChange?: (text: string) => void;
   onAIChatPress?: () => void;
   onNotificationPress?: () => void;
+  showAIChatIcon?: boolean;
+  showNotificationIcon?: boolean;
   onFeelingPress?: (index: number) => void;
   placeholder?: string;
   value?: string;
   userName?: string;
   userAddress?: string;
   profileImageUri?: string | null;
+  showFeelingRow?: boolean;
 }
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({
@@ -35,12 +38,15 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   onSearchChange,
   onAIChatPress,
   onNotificationPress,
+  showAIChatIcon = true,
+  showNotificationIcon = true,
   onFeelingPress,
   placeholder = 'Search doctor, service',
   value = '',
   userName = 'John Doe',
   userAddress = '1901 Thornridge Cir. Shiloh, Hawaii 81063',
   profileImageUri,
+  showFeelingRow = true,
 }) => {
   const insets = useSafeAreaInsets();
   return (
@@ -71,52 +77,60 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
           </View>
         </TouchableOpacity>
         <View style={styles.actionIcons}>
-          <TouchableOpacity
-            style={styles.iconCircle}
-            onPress={onAIChatPress}
-            activeOpacity={0.7}
-          >
-            <Icons.AIChatIcon width={22} height={22} />
-            <View style={styles.redDot} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconCircle}
-            onPress={onNotificationPress}
-            activeOpacity={0.7}
-          >
-            <Icons.NotificationBingIcon width={22} height={22} />
-            <View style={styles.redDot} />
-          </TouchableOpacity>
+          {showAIChatIcon && (
+            <TouchableOpacity
+              style={styles.iconCircle}
+              onPress={onAIChatPress}
+              activeOpacity={onAIChatPress ? 0.7 : 1}
+              disabled={!onAIChatPress}
+            >
+              <Icons.AIChatIcon width={22} height={22} />
+              <View style={styles.redDot} />
+            </TouchableOpacity>
+          )}
+          {showNotificationIcon && (
+            <TouchableOpacity
+              style={styles.iconCircle}
+              onPress={onNotificationPress}
+              activeOpacity={onNotificationPress ? 0.7 : 1}
+              disabled={!onNotificationPress}
+            >
+              <Icons.NotificationBingIcon width={22} height={22} />
+              <View style={styles.redDot} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       {/* Feeling row */}
-      <View style={styles.feelingRow}>
-        <Text style={styles.feelingText}>How are you feeling today?</Text>
-        <View style={styles.emojiRow}>
-          <TouchableOpacity
-            style={styles.emojiCircle}
-            onPress={() => onFeelingPress?.(0)}
-            activeOpacity={0.7}
-          >
-            <Icons.RelievedFaceIcon width={24} height={24} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.emojiCircle}
-            onPress={() => onFeelingPress?.(1)}
-            activeOpacity={0.7}
-          >
-            <Icons.SmilingFaceWithHeartEyesIcon width={24} height={24} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.emojiCircle}
-            onPress={() => onFeelingPress?.(2)}
-            activeOpacity={0.7}
-          >
-            <Icons.SmilingFaceWithSmilingEyesIcon width={24} height={24} />
-          </TouchableOpacity>
+      {showFeelingRow && (
+        <View style={styles.feelingRow}>
+          <Text style={styles.feelingText}>How are you feeling today?</Text>
+          <View style={styles.emojiRow}>
+            <TouchableOpacity
+              style={styles.emojiCircle}
+              onPress={() => onFeelingPress?.(0)}
+              activeOpacity={0.7}
+            >
+              <Icons.RelievedFaceIcon width={24} height={24} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.emojiCircle}
+              onPress={() => onFeelingPress?.(1)}
+              activeOpacity={0.7}
+            >
+              <Icons.SmilingFaceWithHeartEyesIcon width={24} height={24} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.emojiCircle}
+              onPress={() => onFeelingPress?.(2)}
+              activeOpacity={0.7}
+            >
+              <Icons.SmilingFaceWithSmilingEyesIcon width={24} height={24} />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Search bar */}
       <View style={styles.searchWrap}>

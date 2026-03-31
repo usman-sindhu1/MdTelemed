@@ -17,58 +17,103 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 
-type CategoryType = 'Upcoming' | 'Attended' | 'Cancelled' | 'Draft';
+type AppointmentStatus = 'Upcoming' | 'Attended' | 'Cancelled' | 'Draft';
+type CategoryType = 'All' | AppointmentStatus;
 
 interface Appointment {
   id: string;
   doctorName: string;
   doctorImageUri?: string;
   specialty: string;
-  patientType: string;
   date: string;
   time: string;
-  status: string;
+  status: AppointmentStatus;
 }
 
 type AppointmentsNavigationProp = NativeStackNavigationProp<AppointmentsStackParamList>;
 
 const Appointments: React.FC = () => {
   const navigation = useNavigation<AppointmentsNavigationProp>();
-  const [selectedCategory, setSelectedCategory] = useState<CategoryType>('Upcoming');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType>('All');
 
-  const categories: CategoryType[] = ['Upcoming', 'Attended', 'Cancelled', 'Draft'];
+  const categories: CategoryType[] = ['All', 'Upcoming', 'Attended', 'Cancelled', 'Draft'];
 
   const appointments: Appointment[] = [
     {
       id: '5646543',
-      doctorName: 'Cody Fisher',
-      specialty: 'Skin care',
-      patientType: 'For my self',
-      date: 'Jan 22, 2025',
-      time: '11:00 am',
-      status: 'Paid',
+      doctorName: 'Dr. Sarah Johnson',
+      doctorImageUri: 'https://randomuser.me/api/portraits/women/44.jpg',
+      specialty: 'Cardiologist',
+      date: 'Mar 31, 2026',
+      time: '10:00 AM',
+      status: 'Upcoming',
     },
     {
-      id: '5646543',
-      doctorName: 'Cody Fisher',
-      specialty: 'Skin care',
-      patientType: 'For my self',
-      date: 'Jan 22, 2025',
-      time: '11:00 am',
-      status: 'Paid',
+      id: '5646544',
+      doctorName: 'Dr. Michael Chen',
+      doctorImageUri: 'https://randomuser.me/api/portraits/men/32.jpg',
+      specialty: 'Dermatologist',
+      date: 'Mar 28, 2026',
+      time: '2:30 PM',
+      status: 'Attended',
+    },
+    {
+      id: '5646545',
+      doctorName: 'Dr. Emily Carter',
+      doctorImageUri: 'https://randomuser.me/api/portraits/women/68.jpg',
+      specialty: 'Neurologist',
+      date: 'Apr 02, 2026',
+      time: '9:45 AM',
+      status: 'Upcoming',
+    },
+    {
+      id: '5646546',
+      doctorName: 'Dr. James Lee',
+      doctorImageUri: 'https://randomuser.me/api/portraits/men/75.jpg',
+      specialty: 'Gastroenterologist',
+      date: 'Mar 20, 2026',
+      time: '4:15 PM',
+      status: 'Cancelled',
+    },
+    {
+      id: '5646547',
+      doctorName: 'Dr. Olivia Brown',
+      doctorImageUri: 'https://randomuser.me/api/portraits/women/29.jpg',
+      specialty: 'Endocrinologist',
+      date: 'Apr 10, 2026',
+      time: '1:00 PM',
+      status: 'Draft',
     },
   ];
 
-  const handleMenuPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
+  const filteredAppointments = selectedCategory === 'All'
+    ? appointments
+    : appointments.filter((appointment) => appointment.status === selectedCategory);
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
+  const handleProfilePress = () => {
+    navigation.dispatch(DrawerActions.openDrawer());
   };
 
   const handleSearchChange = (text: string) => {
     console.log('Search text:', text);
+  };
+
+  const handleAIChatPress = () => {
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Chat' as never);
+      return;
+    }
+    navigation.navigate('Chat' as never);
+  };
+
+  const handleNotificationPress = () => {
+    const tabNavigation = navigation.getParent();
+    if (tabNavigation) {
+      tabNavigation.navigate('Notifications' as never);
+      return;
+    }
+    navigation.navigate('Notifications' as never);
   };
 
   const handleCardPress = (appointment: Appointment) => {
@@ -76,21 +121,23 @@ const Appointments: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <HomeHeader
-          onMenuPress={handleMenuPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-        />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerContainer}>
+            <HomeHeader
+              onProfilePress={handleProfilePress}
+              onSearchChange={handleSearchChange}
+              onAIChatPress={handleAIChatPress}
+              onNotificationPress={handleNotificationPress}
+              placeholder="Search doctor, service"
+              showFeelingRow={false}
+            />
+          </View>
+          <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
             <Text style={styles.heading}>Appointments</Text>
@@ -125,76 +172,73 @@ const Appointments: React.FC = () => {
 
           {/* Appointment Cards */}
           <View style={styles.cardsContainer}>
-            {appointments.map((appointment, index) => (
+            {filteredAppointments.map((appointment, index) => (
               <TouchableOpacity
                 key={`${appointment.id}-${index}`}
                 style={styles.card}
                 onPress={() => handleCardPress(appointment)}
                 activeOpacity={0.7}
               >
-                {/* ID and Status Labels */}
-                <View style={styles.labelRow}>
-                  <View style={styles.idLabel}>
-                    <Text style={styles.idText}>ID: {appointment.id}</Text>
+                <View style={styles.topRow}>
+                  <View style={styles.imageShell}>
+                    {appointment.doctorImageUri ? (
+                      <Image source={{ uri: appointment.doctorImageUri }} style={styles.profileImage} />
+                    ) : (
+                      <View style={styles.placeholderImage} />
+                    )}
                   </View>
-                  <View style={styles.statusLabel}>
-                    <Text style={styles.statusText}>{appointment.status}</Text>
-                  </View>
-                </View>
-
-                {/* Doctor Information */}
-                <View style={styles.doctorSection}>
-                  <View style={styles.doctorInfo}>
-                    <Text style={styles.doctorLabel}>Doctor name</Text>
-                    <View style={styles.doctorContent}>
-                      <View style={styles.outerBorderContainer}>
-                        <View style={styles.borderContainer}>
-                          <View style={styles.imageContainer}>
-                            {appointment.doctorImageUri ? (
-                              <Image
-                                source={{ uri: appointment.doctorImageUri }}
-                                style={styles.profileImage}
-                              />
-                            ) : (
-                              <View style={styles.placeholderImage} />
-                            )}
-                          </View>
-                        </View>
-                      </View>
-                      <Text style={styles.doctorName}>{appointment.doctorName}</Text>
-                    </View>
+                  <View style={styles.doctorTextWrap}>
+                    <Text style={styles.doctorName} numberOfLines={1}>
+                      {appointment.doctorName}
+                    </Text>
+                    <Text style={styles.specialty} numberOfLines={1}>
+                      {appointment.specialty}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Appointment Details */}
-                <View style={styles.detailsContainer}>
-                  <View style={styles.detailsRow}>
+                <View style={styles.bottomRow}>
+                  <View style={styles.datetimeWrap}>
                     <View style={styles.detailItem}>
-                      <Icons.ServiceIcon width={16} height={16} stroke={Colors.textSecondary} />
-                      <Text style={styles.detailText}>{appointment.specialty}</Text>
+                      <Icons.CalendarTodayIcon width={20} height={20} />
+                      <Text style={styles.detailText} numberOfLines={1}>
+                        {appointment.date}
+                      </Text>
                     </View>
                     <View style={styles.detailItem}>
-                      <Icons.VectorIcon width={16} height={16} fill={Colors.textSecondary} />
-                      <Text style={styles.detailText}>{appointment.patientType}</Text>
+                      <Icons.NestClockFarsightAnalogIcon width={20} height={20} />
+                      <Text style={styles.detailText} numberOfLines={1}>
+                        {appointment.time}
+                      </Text>
                     </View>
                   </View>
-                  <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                      <Icons.VectorIcon width={16} height={16} fill={Colors.textSecondary} />
-                      <Text style={styles.detailText}>{appointment.date}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Icons.CalendarAltIcon width={16} height={16} fill={Colors.textSecondary} />
-                      <Text style={styles.detailText}>{appointment.time}</Text>
-                    </View>
+                  <View
+                    style={[
+                      styles.statusPill,
+                      appointment.status === 'Upcoming'
+                        ? styles.statusUpcoming
+                        : appointment.status === 'Attended'
+                        ? styles.statusAttended
+                        : appointment.status === 'Cancelled'
+                        ? styles.statusCancelled
+                        : styles.statusDraft,
+                    ]}
+                  >
+                    <Text style={styles.statusText}>{appointment.status.toLowerCase()}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
             ))}
+            {filteredAppointments.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No appointments in this status.</Text>
+              </View>
+            ) : null}
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -203,10 +247,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
+  scrollWrapper: {
+    flex: 1,
     backgroundColor: Colors.background,
-    zIndex: 10,
+  },
+  headerContainer: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 0,
   },
   scrollContent: {
     flexGrow: 1,
@@ -243,16 +293,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   categoryTabActive: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   categoryText: {
     fontFamily: Fonts.raleway,
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.textLight,
   },
   categoryTextActive: {
     color: '#FFFFFF',
@@ -261,133 +314,119 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: '#EEEFF3',
+    borderRadius: 24,
     padding: 16,
     width: '100%',
-    minHeight: 200,
+    minHeight: 152,
   },
-  labelRow: {
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
-  idLabel: {
-    backgroundColor: "#A473E5",
+  imageShell: {
+    width: 84,
+    height: 84,
     borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  idText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  statusLabel: {
-    backgroundColor: '#F0E8FB',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  statusText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-  },
-  doctorSection: {
-    marginBottom: 16,
-  },
-  doctorInfo: {
-    backgroundColor: '#EBEBEB',
-    borderRadius: 8,
-    padding: 12,
-  },
-  doctorLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textLight,
-    marginBottom: 8,
-  },
-  doctorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  outerBorderContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  borderContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
     overflow: 'hidden',
-  },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 22,
-    backgroundColor: Colors.backgroundLight,
-    overflow: 'hidden',
+    marginRight: 14,
+    backgroundColor: '#DDE3EA',
   },
   profileImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-    borderRadius: 22,
   },
   placeholderImage: {
     width: '100%',
     height: '100%',
     backgroundColor: Colors.primaryLight,
-    borderRadius: 22,
+  },
+  doctorTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 4,
   },
   doctorName: {
     fontFamily: Fonts.raleway,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textSecondary,
-    flex: 1,
+    color: '#111827',
+    marginBottom: 2,
   },
-  detailsContainer: {
-    gap: 12,
+  specialty: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#6B7280',
   },
-  detailsRow: {
+  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    alignItems: 'flex-start',
+  },
+  datetimeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 8,
+    columnGap: 14,
+    flex: 1,
+    minWidth: 0,
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginLeft: 10,
+    alignSelf: 'flex-start',
+  },
+  statusUpcoming: {
+    backgroundColor: Colors.primary,
+  },
+  statusAttended: {
+    backgroundColor: '#10B981',
+  },
+  statusCancelled: {
+    backgroundColor: '#EF4444',
+  },
+  statusDraft: {
+    backgroundColor: '#9CA3AF',
+  },
+  statusText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'lowercase',
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    gap: 8,
+    gap: 6,
+    minWidth: 0,
+    maxWidth: '48%',
   },
   detailText: {
     fontFamily: Fonts.openSans,
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '400',
-    color: Colors.textSecondary,
-    flex: 1,
+    color: '#6B7280',
+    flexShrink: 1,
+  },
+  emptyState: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: Colors.textLight,
   },
 });
 

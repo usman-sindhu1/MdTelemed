@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sentBubble: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderBottomRightRadius: 4,
   },
   receivedBubble: {

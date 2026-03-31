@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import SimpleBackHeader from '../components/common/SimpleBackHeader';
 import Button from '../components/Button';
 import Icons from '../assets/svg';
@@ -59,6 +59,7 @@ function formatSelectedDate(date: Date): string {
 
 const BookApptSelectTimeslot: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -69,6 +70,19 @@ const BookApptSelectTimeslot: React.FC = () => {
   });
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const buttonAnim = useRef(new Animated.Value(0)).current;
+  const selectedDoctor = route.params?.selectedDoctor;
+  const source = route.params?.source;
+
+  // Reset date & slot when the screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      const now = new Date();
+      setViewMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+      setSelectedDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+      setSelectedSlotId(null);
+      return () => {};
+    }, []),
+  );
 
   useEffect(() => {
     Animated.timing(buttonAnim, {
@@ -84,6 +98,14 @@ const BookApptSelectTimeslot: React.FC = () => {
   const stripDays = useMemo(() => getDaysForMonthStrip(year, month), [year, month]);
 
   const handleBackPress = () => {
+    if (source === 'topDoctors') {
+      if ((navigation as any).canGoBack?.()) {
+        (navigation as any).goBack();
+      } else {
+        (navigation as any).navigate('BookApptSelectDoctor');
+      }
+      return;
+    }
     (navigation as any).navigate('BookApptSelectDoctor');
   };
 
@@ -112,6 +134,14 @@ const BookApptSelectTimeslot: React.FC = () => {
   };
 
   const handleCancelProcess = () => {
+    if (source === 'topDoctors') {
+      if ((navigation as any).canGoBack?.()) {
+        (navigation as any).goBack();
+      } else {
+        (navigation as any).navigate('BookApptSelectDoctor');
+      }
+      return;
+    }
     (navigation as any).navigate('BookApptSelectDoctor');
   };
 
@@ -156,6 +186,14 @@ const BookApptSelectTimeslot: React.FC = () => {
         <Text style={styles.sectionDescription}>
           Lorem ipsum dolor sit amet consectetur adipiscin elit Ut et massa mi.
         </Text>
+
+        {selectedDoctor ? (
+          <View style={styles.selectedDoctorCard}>
+            <Text style={styles.selectedDoctorLabel}>Selected doctor</Text>
+            <Text style={styles.selectedDoctorName}>{selectedDoctor.name}</Text>
+            <Text style={styles.selectedDoctorMeta}>{selectedDoctor.specialty}</Text>
+          </View>
+        ) : null}
 
         {/* Stripe calendar */}
         <View style={styles.calendarStrip}>
@@ -375,6 +413,34 @@ const styles = StyleSheet.create({
   },
   calendarStrip: {
     marginBottom: 20,
+  },
+  selectedDoctorCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#ECF2FD',
+    padding: 12,
+    marginBottom: 16,
+  },
+  selectedDoctorLabel: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#475569',
+    marginBottom: 2,
+  },
+  selectedDoctorName: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  selectedDoctorMeta: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: Colors.primary,
   },
   calendarHeader: {
     flexDirection: 'row',

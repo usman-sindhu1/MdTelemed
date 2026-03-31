@@ -9,13 +9,15 @@ import Invoices from '../screens/drawerScreens/Invoices';
 import InvoiceDetails from '../screens/drawerScreens/InvoicesDetails';
 import RatingsAndReviews from '../screens/drawerScreens/RatingsAndReviews';
 import ReviewDetails from '../screens/drawerScreens/ReviewDetails';
-import ProfileSettings from '../screens/drawerScreens/ProfileSettings';
+import Settings from '../screens/drawerScreens/Settings';
+import ProfileDetails from '../screens/drawerScreens/ProfileSettings';
 import ChangePassword from '../screens/drawerScreens/ChangePassord';
 import Doctors from '../screens/drawerScreens/Doctors';
 import DoctorDetails from '../screens/drawerScreens/DoctorDetails';
 import Services from '../screens/drawerScreens/Services';
 import ContactUs from '../screens/drawerScreens/ContactUs';
 import MedicalInfo from '../screens/drawerScreens/MedicalInfo';
+import MedicalRecords from '../screens/drawerScreens/MedicalRecords';
 import NotificationSettings from '../screens/drawerScreens/NotificationSettings';
 import HelpAndFaqs from '../screens/drawerScreens/HelpAndFaqs';
 import TermsAndConditions from '../screens/drawerScreens/TermsAndConditions';
@@ -26,6 +28,9 @@ import BookApptSelectDoctor from '../screens/BookApptSelectDoctor';
 import BookApptSelectTimeslot from '../screens/BookApptSelectTimeslot';
 import BookApptPatientSummary from '../screens/BookApptPatientSummary';
 import BookApptPaymentInfo from '../screens/BookApptPaymentInfo';
+import ImmediateCareUrgentBooking from '../screens/ImmediateCareUrgentBooking';
+import ImmediateCareAutoAssign from '../screens/ImmediateCareAutoAssign';
+import ImmediateCarePriorityConfirm from '../screens/ImmediateCarePriorityConfirm';
 
 export type DrawerParamList = {
   MainTabs: undefined;
@@ -34,22 +39,68 @@ export type DrawerParamList = {
   RatingsAndReviews: undefined;
   ReviewDetails: undefined;
   ProfileSettings: undefined;
+  ProfileDetails: undefined;
   ChangePassword: undefined;
   Doctors: undefined;
-  DoctorDetails: undefined;
+  DoctorDetails:
+    | {
+        selectedDoctor?: {
+          id: string | number;
+          name: string;
+          specialty: string;
+          rating: string;
+          years: string;
+          patients: string;
+          fee: string;
+          imageUri: string;
+        };
+      }
+    | undefined;
   Services: undefined;
   ContactUs: undefined;
   MedicalInfo: undefined;
+  MedicalRecords: undefined;
   NotificationSettings: undefined;
   HelpAndFaqs: undefined;
   TermsAndConditions: undefined;
   PrivacyPolicy: undefined;
   Language: undefined;
-  BookAppt: undefined;
-  BookApptSelectDoctor: undefined;
+  BookAppt:
+    | {
+        preselectedCategoryId?: string;
+        selectedDoctor?: {
+          id: string | number;
+          name: string;
+          specialty: string;
+          rating: string;
+          years: string;
+          patients: string;
+          fee: string;
+          imageUri: string;
+        };
+      }
+    | undefined;
+  BookApptSelectDoctor:
+    | {
+        selectedDoctor?: {
+          id: string | number;
+          name: string;
+          specialty: string;
+          rating: string;
+          years: string;
+          patients: string;
+          fee: string;
+          imageUri: string;
+        };
+        preselectedCategoryId?: string;
+      }
+    | undefined;
   BookApptSelectTimeslot: undefined;
   BookApptPatientSummary: undefined;
   BookApptPaymentInfo: undefined;
+  ImmediateCareUrgentBooking: undefined;
+  ImmediateCareAutoAssign: undefined;
+  ImmediateCarePriorityConfirm: undefined;
 };
 
 export type RootStackParamList = {
@@ -89,17 +140,22 @@ const HomeStackRoot = () => {
               <Drawer.Screen name="BookApptSelectTimeslot" component={BookApptSelectTimeslot} />
               <Drawer.Screen name="BookApptPatientSummary" component={BookApptPatientSummary} />
               <Drawer.Screen name="BookApptPaymentInfo" component={BookApptPaymentInfo} />
+              <Drawer.Screen name="ImmediateCareUrgentBooking" component={ImmediateCareUrgentBooking} />
+              <Drawer.Screen name="ImmediateCareAutoAssign" component={ImmediateCareAutoAssign} />
+              <Drawer.Screen name="ImmediateCarePriorityConfirm" component={ImmediateCarePriorityConfirm} />
               <Drawer.Screen name="Invoices" component={Invoices} />
               <Drawer.Screen name="InvoiceDetails" component={InvoiceDetails} />
               <Drawer.Screen name="RatingsAndReviews" component={RatingsAndReviews} />
               <Drawer.Screen name="ReviewDetails" component={ReviewDetails} />
-              <Drawer.Screen name="ProfileSettings" component={ProfileSettings} />
+              <Drawer.Screen name="ProfileSettings" component={Settings} />
+              <Drawer.Screen name="ProfileDetails" component={ProfileDetails} />
               <Drawer.Screen name="ChangePassword" component={ChangePassword} />
               <Drawer.Screen name="Doctors" component={Doctors} />
               <Drawer.Screen name="DoctorDetails" component={DoctorDetails} />
               <Drawer.Screen name="Services" component={Services} />
               <Drawer.Screen name="ContactUs" component={ContactUs} />
               <Drawer.Screen name="MedicalInfo" component={MedicalInfo} />
+              <Drawer.Screen name="MedicalRecords" component={MedicalRecords} />
               <Drawer.Screen name="NotificationSettings" component={NotificationSettings} />
               <Drawer.Screen name="HelpAndFaqs" component={HelpAndFaqs} />
               <Drawer.Screen name="TermsAndConditions" component={TermsAndConditions} />

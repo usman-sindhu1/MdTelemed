@@ -18,11 +18,9 @@ const AppointmentsInfo: React.FC = () => {
 
   const appointmentWith = {
     doctorName: 'Ahmad Aslam',
-    linkedClinic: 'Fatmia Memorial Hospital',
     contactNo: '+1 (234) 567-8900',
     email: 'admin@fmh.com',
     website: 'fatimamemorialhospital.com',
-    servicesOffered: '12',
   };
 
   const InfoRow = ({ label, value }: { label: string; value: string }) => (
@@ -48,11 +46,9 @@ const AppointmentsInfo: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Appointment With</Text>
         <InfoRow label="Doctor name:" value={appointmentWith.doctorName} />
-        <InfoRow label="Linked clinic:" value={appointmentWith.linkedClinic} />
         <InfoRow label="Contact no:" value={appointmentWith.contactNo} />
         <InfoRow label="Email:" value={appointmentWith.email} />
         <InfoRow label="Website:" value={appointmentWith.website} />
-        <InfoRow label="Services offered:" value={appointmentWith.servicesOffered} />
       </View>
     </View>
   );

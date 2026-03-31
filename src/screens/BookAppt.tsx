@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import SimpleBackHeader from '../components/common/SimpleBackHeader';
 import Button from '../components/Button';
 import Icons from '../assets/svg';
 import Colors from '../constants/colors';
 import Fonts from '../constants/fonts';
+import type { DrawerParamList } from '../navigation/HomeStackRoot';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTENT_PADDING = 16;
@@ -39,12 +41,17 @@ const CONSULTATION_DURATIONS = [
   { id: 'quick', label: 'Quick Script Repeat' },
 ];
 
+type BookApptRouteProp = RouteProp<DrawerParamList, 'BookAppt'>;
+
 const BookAppt: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<BookApptRouteProp>();
   const [searchText, setSearchText] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [selectedDurationId, setSelectedDurationId] = useState<string | null>(null);
   const buttonAnim = useRef(new Animated.Value(0)).current;
+  const preselectedCategoryId = route.params?.preselectedCategoryId;
+  const selectedDoctor = route.params?.selectedDoctor;
 
   const progressPercent = selectedServiceId ? 16 : 0;
 
@@ -55,6 +62,23 @@ const BookAppt: React.FC = () => {
       useNativeDriver: true,
     }).start();
   }, [selectedDurationId, buttonAnim]);
+
+  // Reset selection each time screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedServiceId(null);
+      setSelectedDurationId(null);
+
+      if (preselectedCategoryId) {
+        const matchedService = SERVICE_CATEGORIES.find(
+          (service) => service.name.toLowerCase() === preselectedCategoryId.toLowerCase(),
+        );
+        if (matchedService) {
+          setSelectedServiceId(matchedService.id);
+        }
+      }
+    }, [preselectedCategoryId]),
+  );
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -74,7 +98,10 @@ const BookAppt: React.FC = () => {
   };
 
   const handleContinue = () => {
-    (navigation as any).navigate('BookApptSelectDoctor');
+    (navigation as any).navigate('BookApptSelectDoctor', {
+      selectedDoctor,
+      preselectedCategoryId,
+    });
   };
 
   const handleCancelProcess = () => {

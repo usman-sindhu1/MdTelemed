@@ -68,12 +68,12 @@ const Chat: React.FC = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
   const handleSearchChange = (text: string) => {
     console.log('Search text:', text);
+  };
+
+  const handleNotificationPress = () => {
+    navigation.navigate('Notifications' as never);
   };
 
   const handleChatPress = (chat: ChatData) => {
@@ -81,21 +81,23 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <HomeHeader
-          onMenuPress={handleMenuPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-        />
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
+    <View style={styles.container}>
+      <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerContainer}>
+            <HomeHeader
+              onProfilePress={handleMenuPress}
+              onSearchChange={handleSearchChange}
+              onNotificationPress={handleNotificationPress}
+              placeholder="Search chat"
+              showFeelingRow={false}
+              showAIChatIcon={false}
+            />
+          </View>
+          <View style={styles.content}>
           <Text style={styles.heading}>Chat</Text>
 
           {/* Chat List */}
@@ -123,9 +125,10 @@ const Chat: React.FC = () => {
               );
             })}
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -134,10 +137,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
+  scrollWrapper: {
+    flex: 1,
     backgroundColor: Colors.background,
-    zIndex: 10,
+  },
+  headerContainer: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 0,
   },
   scrollContent: {
     flexGrow: 1,

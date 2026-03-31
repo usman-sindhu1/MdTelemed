@@ -13,6 +13,8 @@ interface SimpleBackHeaderProps {
   children?: React.ReactNode;
   /** Bottom corner radius for the header container. */
   bottomRadius?: number;
+  /** Reduces top/bottom spacing for compact headers. */
+  compact?: boolean;
 }
 
 const SimpleBackHeader: React.FC<SimpleBackHeaderProps> = ({
@@ -21,11 +23,15 @@ const SimpleBackHeader: React.FC<SimpleBackHeaderProps> = ({
   rightElement,
   backgroundColor = '#ECF2FD',
   children,
-  bottomRadius = 0,
+  bottomRadius,
+  compact = false,
 }) => {
   const insets = useSafeAreaInsets();
+  const resolvedBottomRadius = bottomRadius ?? 24;
+  const hasExplicitBottomRadius = bottomRadius !== undefined;
 
-  const paddingBottom = bottomRadius > 0 ? 44 : 16;
+  const paddingBottom = hasExplicitBottomRadius && resolvedBottomRadius > 0 ? 44 : compact ? 8 : 16;
+  const topOffset = compact ? 6 : 12;
 
   return (
     <View
@@ -33,10 +39,10 @@ const SimpleBackHeader: React.FC<SimpleBackHeaderProps> = ({
         styles.wrapper,
         {
           backgroundColor,
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top + topOffset,
           paddingBottom,
-          borderBottomLeftRadius: bottomRadius,
-          borderBottomRightRadius: bottomRadius,
+          borderBottomLeftRadius: resolvedBottomRadius,
+          borderBottomRightRadius: resolvedBottomRadius,
           overflow: 'hidden',
         },
       ]}
@@ -65,7 +71,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 14,
+    paddingBottom: 8,
   },
   bottomContent: {},
   backButton: {

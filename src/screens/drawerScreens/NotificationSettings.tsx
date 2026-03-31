@@ -8,9 +8,9 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
@@ -82,15 +82,7 @@ const NotificationSettings: React.FC = () => {
   ]);
 
   const handleBackPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
-
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+    navigation.navigate('ProfileSettings');
   };
 
   const handleToggle = (id: string) => {
@@ -102,16 +94,8 @@ const NotificationSettings: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SimpleBackHeader title="Notifications" onBackPress={handleBackPress} compact />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -120,7 +104,7 @@ const NotificationSettings: React.FC = () => {
         <View style={styles.content}>
           {/* Title Section */}
           <View style={styles.titleSection}>
-            <Text style={styles.heading}>Notification Settings</Text>
+            <Text style={styles.heading}>Notifications</Text>
             <Text style={styles.description}>
               Manage your notification preferences. Choose what notifications you want to receive.
             </Text>
@@ -160,12 +144,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
-    zIndex: 10,
-    paddingBottom: 8,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 100,
@@ -181,7 +159,7 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Fonts.raleway,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
   description: {
@@ -202,7 +180,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: '#E4E8EF',
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,

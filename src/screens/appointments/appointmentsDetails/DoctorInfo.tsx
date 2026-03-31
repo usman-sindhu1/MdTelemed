@@ -4,11 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
-import Icons from '../../../assets/svg';
 
 type SubTabType = 'Other Details' | 'Available Hours' | 'Reviews';
 
@@ -26,8 +24,6 @@ const DoctorInfo: React.FC = () => {
     language: 'English, Spanish',
     fundingOptions: 'Cash & Card',
     serviceDelivery: 'Immidiate',
-    linkedClinic: 'Fatima Memorial Hospital',
-    specialInterestArea: 'Developmental Language Disorder (DLD), Literacy, Articulation, Supporting autistic individuals, Parent and caregiver coaching, Early language supports, Social Skills',
   };
 
   const availableHours = [
@@ -80,11 +76,6 @@ const DoctorInfo: React.FC = () => {
           <InfoRow label="Language:" value={doctorData.language} />
           <InfoRow label="Funding options:" value={doctorData.fundingOptions} />
           <InfoRow label="Service delivery:" value={doctorData.serviceDelivery} />
-          <InfoRow label="Linked clinic:" value={doctorData.linkedClinic} />
-          <View style={styles.specialInterestRow}>
-            <Text style={styles.infoLabel}>Special interest area:</Text>
-            <Text style={styles.specialInterestValue}>{doctorData.specialInterestArea}</Text>
-          </View>
         </View>
       );
     }
@@ -287,7 +278,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundLight,
   },
   subTabActive: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
   },
   subTabText: {
     fontFamily: Fonts.raleway,
@@ -320,18 +311,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: Colors.textPrimary,
     marginLeft: 4,
-  },
-  specialInterestRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  specialInterestValue: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-    flex: 1,
   },
   placeholderText: {
     fontFamily: Fonts.openSans,

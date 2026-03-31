@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import SimpleBackHeader from '../components/common/SimpleBackHeader';
 import Button from '../components/Button';
 import Icons from '../assets/svg';
@@ -59,31 +59,52 @@ const PHARMACIES = [
 
 const BookApptSelectDoctor: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const [apptType, setApptType] = useState<'immediate' | 'later'>('immediate');
   const [doctorSearch, setDoctorSearch] = useState('');
+  const preselectedDoctor = route.params?.selectedDoctor;
   const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null);
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null);
   const buttonAnim = useRef(new Animated.Value(0)).current;
+  const selectedDoctorForFlow = preselectedDoctor ?? DOCTORS.find((d) => d.id === selectedDoctorId) ?? null;
+  const hasDoctorSelected = Boolean(selectedDoctorId);
 
-  const bothSelected = Boolean(selectedDoctorId && selectedPharmacyId);
+  // Reset selection each time screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedDoctorId(null);
+      setSelectedPharmacyId(null);
+    }, []),
+  );
 
   useEffect(() => {
     Animated.timing(buttonAnim, {
-      toValue: bothSelected ? 1 : 0,
+      toValue: hasDoctorSelected ? 1 : 0,
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [bothSelected, buttonAnim]);
+  }, [hasDoctorSelected, buttonAnim]);
 
   const handleBackPress = () => {
+    if ((navigation as any).canGoBack?.()) {
+      (navigation as any).goBack();
+      return;
+    }
     (navigation as any).navigate('BookAppt');
   };
 
   const handleContinue = () => {
-    (navigation as any).navigate('BookApptSelectTimeslot');
+    (navigation as any).navigate('BookApptSelectTimeslot', {
+      selectedDoctor: selectedDoctorForFlow,
+      source: 'topDoctors',
+    });
   };
 
   const handleCancelProcess = () => {
+    if ((navigation as any).canGoBack?.()) {
+      (navigation as any).goBack();
+      return;
+    }
     (navigation as any).navigate('BookAppt');
   };
 
@@ -125,73 +146,91 @@ const BookApptSelectDoctor: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Select doctor */}
-        <Text style={styles.sectionTitle}>Select doctor</Text>
-        <Text style={styles.sectionDescription}>
-          Lorem ipsum dolor sit amet consectetur adipiscin elit Ut et massa mi.
-        </Text>
-
-        {/* Tabs */}
-        <View style={styles.tabsRow}>
-          <TouchableOpacity
-            style={[styles.tab, apptType === 'immediate' && styles.tabSelected]}
-            onPress={() => setApptType('immediate')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, apptType === 'immediate' && styles.tabTextSelected]}>
-              Immediate Appt.
+        {!preselectedDoctor ? (
+          <>
+            <Text style={styles.sectionTitle}>Select doctor</Text>
+            <Text style={styles.sectionDescription}>
+              Lorem ipsum dolor sit amet consectetur adipiscin elit Ut et massa mi.
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, apptType === 'later' && styles.tabSelected]}
-            onPress={() => setApptType('later')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.tabText, apptType === 'later' && styles.tabTextSelected]}>
-              Setup for Later
-            </Text>
-          </TouchableOpacity>
-        </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Selected doctor</Text>
+            <View style={styles.preselectedDoctorCard}>
+              <Text style={styles.preselectedDoctorName}>{preselectedDoctor.name}</Text>
+              <Text style={styles.preselectedDoctorMeta}>{preselectedDoctor.specialty}</Text>
+            </View>
+          </>
+        )}
 
-        {/* Search doctor */}
-        <View style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search your doctor"
-            placeholderTextColor="#9CA3AF"
-            value={doctorSearch}
-            onChangeText={setDoctorSearch}
-          />
-          <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
-            <Icons.PageInfoIcon width={22} height={22} />
-          </TouchableOpacity>
-        </View>
+        {!preselectedDoctor ? (
+          <>
+            {/* Tabs */}
+            <View style={styles.tabsRow}>
+              <TouchableOpacity
+                style={[styles.tab, apptType === 'immediate' && styles.tabSelected]}
+                onPress={() => setApptType('immediate')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabText, apptType === 'immediate' && styles.tabTextSelected]}>
+                  Immediate Appt.
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, apptType === 'later' && styles.tabSelected]}
+                onPress={() => setApptType('later')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tabText, apptType === 'later' && styles.tabTextSelected]}>
+                  Setup for Later
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Doctor cards */}
-        {DOCTORS.map((doc) => {
-          const isSelected = selectedDoctorId === doc.id;
-          return (
-            <TouchableOpacity
-              key={doc.id}
-              style={[styles.doctorCard, isSelected && styles.doctorCardSelected]}
-              onPress={() => setSelectedDoctorId(doc.id)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.doctorIconWrap}>
-                <Icons.Doctor1Icon width={48} height={48} />
-              </View>
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>{doc.name}</Text>
-                <Text style={styles.doctorQualification}>{doc.qualification}</Text>
-                <View style={styles.ratingRow}>
-                  <Icons.StarFill1Icon width={14} height={14} />
-                  <Text style={styles.ratingValue}>{doc.rating}</Text>
-                  <Text style={styles.ratingBookings}> {doc.bookings} bookings</Text>
-                </View>
-                <Text style={styles.nextAvailable}>Next Available: {doc.nextAvailable}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+            {/* Search doctor */}
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search your doctor"
+                placeholderTextColor="#9CA3AF"
+                value={doctorSearch}
+                onChangeText={setDoctorSearch}
+              />
+              <TouchableOpacity style={styles.filterButton} activeOpacity={0.7}>
+                <Icons.PageInfoIcon width={22} height={22} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Doctor cards (tap to select / unselect) */}
+            {DOCTORS.map((doc) => {
+              const isSelected = selectedDoctorId === doc.id;
+              return (
+                <TouchableOpacity
+                  key={doc.id}
+                  style={[styles.doctorCard, isSelected && styles.doctorCardSelected]}
+                  onPress={() =>
+                    setSelectedDoctorId((prev) => (prev === doc.id ? null : doc.id))
+                  }
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.doctorIconWrap}>
+                    <Icons.Doctor1Icon width={48} height={48} />
+                  </View>
+                  <View style={styles.doctorInfo}>
+                    <Text style={styles.doctorName}>{doc.name}</Text>
+                    <Text style={styles.doctorQualification}>{doc.qualification}</Text>
+                    <View style={styles.ratingRow}>
+                      <Icons.StarFill1Icon width={14} height={14} />
+                      <Text style={styles.ratingValue}>{doc.rating}</Text>
+                      <Text style={styles.ratingBookings}> {doc.bookings} bookings</Text>
+                    </View>
+                    <Text style={styles.nextAvailable}>Next Available: {doc.nextAvailable}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        ) : null}
 
         {/* Select Pharmacy */}
         <Text style={styles.sectionTitle}>Select Pharmacy</Text>
@@ -223,7 +262,7 @@ const BookApptSelectDoctor: React.FC = () => {
           );
         })}
 
-        {/* Action buttons - show only when both doctor and pharmacy selected */}
+        {/* Action buttons - enabled when a doctor is selected (pharmacy optional) */}
         <Animated.View
           style={[
             styles.actionButtons,
@@ -239,7 +278,7 @@ const BookApptSelectDoctor: React.FC = () => {
               ],
             },
           ]}
-          pointerEvents={bothSelected ? 'auto' : 'none'}
+          pointerEvents={hasDoctorSelected ? 'auto' : 'none'}
         >
           <Button
             variant="primary"
@@ -537,6 +576,27 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     marginTop: 24,
+  },
+  preselectedDoctorCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#ECF2FD',
+    padding: 12,
+    marginBottom: 16,
+  },
+  preselectedDoctorName: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  preselectedDoctorMeta: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: Colors.primary,
   },
   continueButtonPrimary: {
     marginBottom: 12,

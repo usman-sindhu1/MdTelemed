@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Image,
 } from 'react-native';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
@@ -52,16 +53,18 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
         'RatingsAndReviews': 'rating',
         'ReviewDetails': 'rating',
         'ProfileSettings': 'profile-settings',
+        'ProfileDetails': 'profile-settings',
         'ChangePassword': 'change-password',
         'Doctors': 'doctors',
         'DoctorDetails': 'doctors',
         'Services': 'services',
         'ContactUs': 'contact',
         'MedicalInfo': 'medical-info',
-        'NotificationSettings': 'notification-settings',
-        'HelpAndFaqs': 'help-faqs',
-        'TermsAndConditions': 'terms',
-        'PrivacyPolicy': 'privacy',
+        'MedicalRecords': 'medical-records',
+        'NotificationSettings': 'profile-settings',
+        'HelpAndFaqs': 'profile-settings',
+        'TermsAndConditions': 'profile-settings',
+        'PrivacyPolicy': 'profile-settings',
         'Language': 'language',
       };
       return screenToItemMap[currentRouteName] || null;
@@ -118,7 +121,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     },
     {
       id: 'services',
-      label: 'Services',
+      label: 'Categories',
       icon: (
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
           <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="#000" strokeWidth="1.5" fill="none" />
@@ -132,7 +135,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     },
     {
       id: 'invoices',
-      label: 'Invoices',
+      label: 'Payments',
       icon: (
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
           <Path d="M12 2v20M17 5H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H6" stroke="#000" strokeWidth="1.5" fill="none" />
@@ -159,6 +162,16 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
       ),
     },
     {
+      id: 'medical-records',
+      label: 'Medical Records',
+      icon: (
+        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+          <Rect x="5" y="3" width="14" height="18" rx="2.5" stroke="#000" strokeWidth="1.5" fill="none" />
+          <Path d="M8 8h8M8 12h8M8 16h5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
+        </Svg>
+      ),
+    },
+    {
       id: 'contact',
       label: 'Contact us',
       icon: (
@@ -173,38 +186,13 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
   const accountSettings: DrawerItem[] = [
     {
       id: 'profile-settings',
-      label: 'Profile Settings',
+      label: 'Settings',
       icon: <Icons.UserSettingsIcon width={24} height={24} />,
-    },
-    {
-      id: 'language',
-      label: 'Language',
-      icon: (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-          <Circle cx="12" cy="12" r="10" stroke="#000" strokeWidth="1.5" fill="none" />
-          <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#000" strokeWidth="1.5" fill="none" />
-        </Svg>
-      ),
     },
     {
       id: 'change-password',
       label: 'Change Password',
       icon: <Icons.PasswordIcon width={24} height={24} />,
-    },
-    {
-      id: 'notification-settings',
-      label: 'Notification Settings',
-      icon: (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-          <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#000" strokeWidth="1.5" fill="none" />
-          <Path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#000" strokeWidth="1.5" fill="none" />
-        </Svg>
-      ),
-    },
-    {
-      id: 'help-faqs',
-      label: "Help & FAQ's",
-      icon: <Icons.Vector7Icon width={24} height={24} />,
     },
     {
       id: 'logout',
@@ -260,18 +248,9 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     } else if (itemId === 'medical-info') {
       // Navigate to Medical Info screen
       props.navigation.navigate('MedicalInfo');
-    } else if (itemId === 'notification-settings') {
-      // Navigate to Notification Settings screen
-      props.navigation.navigate('NotificationSettings');
-    } else if (itemId === 'help-faqs') {
-      // Navigate to Help & FAQs screen
-      props.navigation.navigate('HelpAndFaqs');
-    } else if (itemId === 'terms') {
-      // Navigate to Terms & Conditions screen
-      props.navigation.navigate('TermsAndConditions');
-    } else if (itemId === 'privacy') {
-      // Navigate to Privacy Policy screen
-      props.navigation.navigate('PrivacyPolicy');
+    } else if (itemId === 'medical-records') {
+      // Navigate to Medical Records screen
+      props.navigation.navigate('MedicalRecords');
     } else if (itemId === 'language') {
       // Navigate to Language screen
       props.navigation.navigate('Language');
@@ -301,6 +280,15 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
 
   const renderDrawerItem = (item: DrawerItem) => {
     const isActive = activeItemId === item.id;
+    const iconNode = item.id === 'medical-records'
+      ? (
+        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+          <Rect x="5" y="3" width="14" height="18" rx="2.5" stroke="#000" strokeWidth="1.5" fill="none" />
+          <Path d="M8 8h8M8 12h8M8 16h5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
+        </Svg>
+      )
+      : item.icon;
+
     return (
       <TouchableOpacity
         key={item.id}
@@ -312,7 +300,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
         activeOpacity={0.7}
       >
         <View style={styles.iconContainer}>
-          {item.icon}
+          {iconNode}
         </View>
         <Text style={[
           styles.drawerItemText,
@@ -330,7 +318,11 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
-          <Icons.Logo1 width={220} height={80} preserveAspectRatio="xMidYMid meet" />
+          <Image
+            source={require('../../assets/svg/logo1.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         <Text style={styles.headerTitle}>Profile Options</Text>
       </View>
@@ -344,28 +336,6 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account Settings</Text>
         {accountSettings.map(renderDrawerItem)}
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity 
-          style={styles.footerLinkContainer}
-          onPress={() => handleItemPress('terms')} 
-          activeOpacity={0.7}
-        >
-          <Text style={styles.footerLink} numberOfLines={2}>
-            Terms & Conditions
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.footerLinkContainer}
-          onPress={() => handleItemPress('privacy')} 
-          activeOpacity={0.7}
-        >
-          <Text style={styles.footerLink} numberOfLines={2}>
-            Privacy Policy
-          </Text>
-        </TouchableOpacity>
       </View>
 
       {/* Logout Loading Modal */}
@@ -400,10 +370,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoContainer: {
-    width: '100%',
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
-    marginLeft: -65
+  },
+  logo: {
+    width: 80,
+    height: 80,
   },
   headerTitle: {
     fontFamily: Fonts.raleway,
@@ -432,7 +404,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   drawerItemActive: {
-    backgroundColor: '#F0E8FB',
+    backgroundColor: Colors.backgroundGradient.start,
     borderTopRightRadius: 80,
     borderBottomRightRadius: 80,
   },

@@ -8,7 +8,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
@@ -35,10 +35,14 @@ const ReviewDetails: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* Fixed Header */}
       <View style={styles.headerContainer}>
-        <BackHeader onBackPress={handleBackPress} />
+        <SimpleBackHeader
+          title="Review Details"
+          onBackPress={handleBackPress}
+          backgroundColor="#ECF2FD"
+        />
       </View>
 
       <ScrollView
@@ -51,7 +55,7 @@ const ReviewDetails: React.FC = () => {
             <View style={styles.titleRow}>
               <Text style={styles.heading}>Review Details</Text>
               <View style={styles.ratingContainer}>
-                <Icons.Star1Icon width={16} height={16} fill="#A473E5" />
+                <Icons.Star1Icon width={16} height={16} fill={Colors.primary} />
                 <Text style={styles.ratingText}>{rating}</Text>
               </View>
             </View>
@@ -108,10 +112,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   headerContainer: {
-    paddingHorizontal: 15,
     backgroundColor: Colors.background,
     zIndex: 10,
-    paddingBottom: 8,
   },
   scrollContent: {
     flexGrow: 1,
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   titleSection: {
-    marginTop: 24,
+    marginTop: 16,
     marginBottom: 24,
     gap: 12,
   },
@@ -145,10 +147,10 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.raleway,
     fontSize: 14,
     fontWeight: '600',
-    color: '#A473E5',
+    color: Colors.primary,
   },
   idLabel: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,

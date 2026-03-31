@@ -1,6 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Home from '../screens/home';
+import HomeDoctorsList from '../screens/home/HomeDoctorsList';
+import HomeDoctorDetails from '../screens/home/HomeDoctorDetails';
 import Appointments from '../screens/appointments';
 import AppointmentDetails from '../screens/appointments/appointmentsDetails';
 import PrescriptionDetails from '../screens/prescription/prescriptionDetails';
@@ -25,6 +27,22 @@ import InboxChat from '../screens/chat/InboxChat';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
+  HomeDoctorsList: {
+    selectedCategoryId?: string;
+  } | undefined;
+  HomeDoctorDetails: {
+    doctor: {
+      id: string;
+      name: string;
+      specialty: string;
+      rating: string;
+      years: string;
+      patients: string;
+      fee: string;
+      imageUri: string;
+    };
+    selectedCategoryId?: string;
+  };
 };
 
 export type AppointmentsStackParamList = {
@@ -75,6 +93,8 @@ export const HomeStack = () => {
       }}
     >
       <HomeStackNavigator.Screen name="HomeMain" component={Home} />
+      <HomeStackNavigator.Screen name="HomeDoctorsList" component={HomeDoctorsList} />
+      <HomeStackNavigator.Screen name="HomeDoctorDetails" component={HomeDoctorDetails} />
     </HomeStackNavigator.Navigator>
   );
 };

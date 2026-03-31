@@ -6,11 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
@@ -40,6 +42,16 @@ const InboxChat: React.FC = () => {
   const params = (route.params as RouteParams) || {};
   const chatName = params.chatName || 'Eleanor Pena';
   const [message, setMessage] = useState('');
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const messages: Message[] = [
     {
@@ -87,10 +99,6 @@ const InboxChat: React.FC = () => {
     console.log('Search pressed');
   };
 
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
-  };
-
   const handleSend = () => {
     if (message.trim()) {
       console.log('Send message:', message);
@@ -105,106 +113,131 @@ const InboxChat: React.FC = () => {
   let currentDate = '';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
-        <Text style={styles.chatTitle}>{chatName}</Text>
-      </View>
-
-      {/* Chat Messages */}
-      <ScrollView
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        {messages.map((msg) => {
-          const showDate = msg.date && msg.date !== currentDate;
-          if (showDate) {
-            currentDate = msg.date || '';
-          }
-          return (
-            <View key={msg.id}>
-              {showDate && (
-                <View style={styles.dateSeparator}>
-                  <Text style={styles.dateText}>{msg.date}</Text>
-                </View>
-              )}
-              <View
-                style={[
-                  styles.messageContainer,
-                  msg.isSent ? styles.sentMessage : styles.receivedMessage,
-                ]}
+        <View style={styles.headerBlock}>
+          <View style={[styles.headerContainer, { paddingTop: insets.top + 12 }]}>
+            <View style={styles.headerActionsRow}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={handleBackPress}
+                activeOpacity={0.7}
               >
-                {!msg.isSent && (
-                  <View style={styles.avatarContainer}>
-                    <Icons.Ellipse107Icon width={40} height={40} />
+                <Icons.Vector1Icon width={22} height={22} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={handleSearchPress}
+                activeOpacity={0.7}
+              >
+                <Icons.Search width={20} height={20} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        <View style={styles.titleWrap}>
+          <Text style={styles.chatTitle}>{chatName}</Text>
+        </View>
+
+        {/* Chat Messages */}
+        <ScrollView
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {messages.map((msg) => {
+            const showDate = msg.date && msg.date !== currentDate;
+            if (showDate) {
+              currentDate = msg.date || '';
+            }
+            return (
+              <View key={msg.id}>
+                {showDate && (
+                  <View style={styles.dateSeparator}>
+                    <Text style={styles.dateText}>{msg.date}</Text>
                   </View>
                 )}
                 <View
                   style={[
-                    styles.messageBubble,
-                    msg.isSent ? styles.sentBubble : styles.receivedBubble,
+                    styles.messageContainer,
+                    msg.isSent ? styles.sentMessage : styles.receivedMessage,
                   ]}
                 >
-                  <Text
+                  {!msg.isSent && (
+                    <View style={styles.avatarContainer}>
+                      <Icons.Ellipse107Icon width={40} height={40} />
+                    </View>
+                  )}
+                  <View
                     style={[
-                      styles.messageText,
-                      msg.isSent ? styles.sentText : styles.receivedText,
+                      styles.messageBubble,
+                      msg.isSent ? styles.sentBubble : styles.receivedBubble,
                     ]}
                   >
-                    {msg.text}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.messageTime,
-                      msg.isSent ? styles.sentTime : styles.receivedTime,
-                    ]}
-                  >
-                    {msg.time}
-                  </Text>
-                </View>
-                {msg.isSent && (
-                  <View style={styles.avatarContainer}>
-                    <Icons.Ellipse106Icon width={40} height={40} />
+                    <Text
+                      style={[
+                        styles.messageText,
+                        msg.isSent ? styles.sentText : styles.receivedText,
+                      ]}
+                    >
+                      {msg.text}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.messageTime,
+                        msg.isSent ? styles.sentTime : styles.receivedTime,
+                      ]}
+                    >
+                      {msg.time}
+                    </Text>
                   </View>
-                )}
+                  {msg.isSent && (
+                    <View style={styles.avatarContainer}>
+                      <Icons.Ellipse106Icon width={40} height={40} />
+                    </View>
+                  )}
+                </View>
               </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
 
-      {/* Input Bar */}
-      <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
-        <TouchableOpacity
-          style={styles.attachButton}
-          onPress={handleAttach}
-          activeOpacity={0.7}
+        {/* Input Bar */}
+        <View
+          style={[
+            styles.inputContainer,
+            { paddingBottom: keyboardVisible ? 0 : Math.max(insets.bottom, 12) },
+          ]}
         >
-          <Icons.Vector5Icon width={20} height={20} />
-        </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          placeholder="Write your message"
-          placeholderTextColor={Colors.textLight}
-          value={message}
-          onChangeText={setMessage}
-          multiline
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={handleSend}
-          activeOpacity={0.7}
-        >
-          <Icons.SentMessageIcon width={20} height={20} />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.attachButton}
+            onPress={handleAttach}
+            activeOpacity={0.7}
+          >
+            <Icons.Vector5Icon width={20} height={20} />
+          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Write your message"
+            placeholderTextColor={Colors.textLight}
+            value={message}
+            onChangeText={setMessage}
+            multiline
+          />
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSend}
+            activeOpacity={0.7}
+          >
+            <Icons.SentMessageIcon width={20} height={20} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -216,9 +249,36 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 15,
-    backgroundColor: Colors.background,
     zIndex: 10,
     paddingBottom: 8,
+  },
+  headerBlock: {
+    backgroundColor: '#ECF2FD',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  headerActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  titleWrap: {
+    paddingHorizontal: 15,
+    marginTop: 14,
   },
   chatTitle: {
     fontFamily: Fonts.raleway,
@@ -273,7 +333,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sentBubble: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderBottomRightRadius: 4,
   },
   receivedBubble: {

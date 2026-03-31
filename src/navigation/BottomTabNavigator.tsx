@@ -32,7 +32,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   
   // Check nested routes for SessionJoined, AppointmentDetails, SelectService, SelectDoctor, or DoctorDetails
   const shouldHideTabBar = currentRoute?.state?.routes?.some(
-    (route: any) => route.name === 'SessionJoined' || route.name === 'AppointmentDetails' || route.name === 'SelectService' || route.name === 'SelectDoctor' || route.name === 'DoctorDetails'
+    (route: any) => route.name === 'JoinSession' || route.name === 'SessionJoined' || route.name === 'AppointmentDetails' || route.name === 'SelectService' || route.name === 'SelectDoctor' || route.name === 'DoctorDetails' || route.name === 'InboxChat'
   ) || false;
 
   // Animate tab bar based on scroll direction - must be called unconditionally
@@ -82,7 +82,21 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           });
 
           if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
+            const initialNestedScreenMap: Record<string, string> = {
+              Home: 'HomeMain',
+              Calendar: 'AppointmentsMain',
+              Prescription: 'PrescriptionMain',
+              Notifications: 'NotificationsMain',
+              Chat: 'ChatMain',
+            };
+
+            const initialScreen = initialNestedScreenMap[route.name];
+            if (initialScreen) {
+              (navigation as any).navigate(route.name, { screen: initialScreen });
+              return;
+            }
+
+            navigation.navigate(route.name as never);
           }
         };
 
@@ -256,7 +270,7 @@ const styles = StyleSheet.create({
   },
   tabBarContainer: {
     flexDirection: 'row',
-    backgroundColor: '#2563EB',
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     marginHorizontal: 15,
     height: 64,

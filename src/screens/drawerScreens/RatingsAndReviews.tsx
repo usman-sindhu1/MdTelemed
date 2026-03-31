@@ -6,10 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
@@ -28,6 +27,7 @@ interface ReviewData {
 
 const RatingsAndReviews: React.FC = () => {
   const navigation = useNavigation<RatingsAndReviewsNavigationProp>();
+  const insets = useSafeAreaInsets();
 
   const reviews: ReviewData[] = [
     {
@@ -51,28 +51,22 @@ const RatingsAndReviews: React.FC = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
-  };
-
   const handleCardPress = (review: ReviewData) => {
     navigation.navigate('ReviewDetails');
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.headerBlock}>
+        <View style={[styles.headerRow, { paddingTop: insets.top + 6 }]}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+            <Icons.Back width={22} height={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Ratings & Reviews</Text>
+          <TouchableOpacity style={styles.searchButton} activeOpacity={0.7}>
+            <Icons.Search width={20} height={20} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -102,7 +96,7 @@ const RatingsAndReviews: React.FC = () => {
                     <Text style={styles.idText}>ID: {review.id}</Text>
                   </View>
                   <View style={styles.ratingContainer}>
-                    <Icons.Star1Icon width={16} height={16} fill="#A473E5" />
+                    <Icons.Star1Icon width={16} height={16} fill={Colors.primary} />
                     <Text style={styles.ratingText}>{review.rating}</Text>
                   </View>
                 </View>
@@ -127,11 +121,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
-    zIndex: 10,
+  headerBlock: {
+    backgroundColor: '#ECF2FD',
+    paddingHorizontal: 16,
     paddingBottom: 8,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  searchButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollContent: {
     flexGrow: 1,
@@ -173,7 +193,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   idLabel: {
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -193,7 +213,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.raleway,
     fontSize: 14,
     fontWeight: '600',
-    color: '#A473E5',
+    color: Colors.primary,
   },
   reviewSection: {
     gap: 8,

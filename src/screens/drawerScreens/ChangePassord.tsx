@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, DrawerActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
+import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import PasswordInput from '../../components/PasswordInput';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
@@ -31,30 +32,14 @@ const ChangePassword: React.FC = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
-  };
-
   const handleUpdatePassword = () => {
     console.log('Update password pressed');
     // TODO: Implement password update logic
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
-        <BackHeader
-          onBackPress={handleBackPress}
-          onSearchPress={handleSearchPress}
-          onSearchChange={handleSearchChange}
-          showSearchIcon={true}
-        />
-      </View>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SimpleBackHeader title="Change Password" onBackPress={handleBackPress} compact />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -110,12 +95,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
-    paddingHorizontal: 15,
-    backgroundColor: Colors.background,
-    zIndex: 10,
-    paddingBottom: 8,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 100,
@@ -126,10 +105,10 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Fonts.raleway,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
-    marginTop: 24,
-    marginBottom: 32,
+    marginTop: 16,
+    marginBottom: 28,
   },
   inputsContainer: {
     gap: 20,
@@ -145,7 +124,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 52,
     borderRadius: 80,
-    backgroundColor: '#A473E5',
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },

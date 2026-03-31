@@ -6,12 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BackHeader from '../../components/common/BackHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
+import Icons from '../../assets/svg';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
 
 type InvoicesNavigationProp = NativeStackNavigationProp<
@@ -19,31 +19,39 @@ type InvoicesNavigationProp = NativeStackNavigationProp<
   'Invoices'
 >;
 
-interface InvoiceData {
+interface PaymentData {
   id: string;
-  status: string;
-  serviceName: string;
+  title: string;
   amount: string;
-  paidDate: string;
+  date: string;
+  status: 'Completed' | 'Pending';
 }
 
 const Invoices: React.FC = () => {
   const navigation = useNavigation<InvoicesNavigationProp>();
+  const insets = useSafeAreaInsets();
 
-  const invoices: InvoiceData[] = [
+  const payments: PaymentData[] = [
     {
-      id: '5646543',
-      status: 'Paid',
-      serviceName: 'Service Name',
-      amount: '$25.00',
-      paidDate: 'Jan 12, 2025',
+      id: '1',
+      title: 'Dr. Sarah Johnson - Consultation',
+      amount: '$50.00',
+      date: 'Mar 28, 2026',
+      status: 'Completed',
     },
     {
-      id: '5646543',
-      status: 'Paid',
-      serviceName: 'Service Name',
-      amount: '$25.00',
-      paidDate: 'Jan 12, 2025',
+      id: '2',
+      title: 'Dr. Michael Chen - Consultation',
+      amount: '$45.00',
+      date: 'Mar 25, 2026',
+      status: 'Completed',
+    },
+    {
+      id: '3',
+      title: 'Lab Tests - Blood Work',
+      amount: '$85.00',
+      date: 'Mar 20, 2026',
+      status: 'Pending',
     },
   ];
 
@@ -51,76 +59,51 @@ const Invoices: React.FC = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleSearchPress = () => {
-    console.log('Search pressed');
-  };
-
-  const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
-  };
-
-  const handleCardPress = (invoice: InvoiceData) => {
-    navigation.navigate('InvoiceDetails');
-  };
-
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          <BackHeader
-            onBackPress={handleBackPress}
-            onSearchPress={handleSearchPress}
-            onSearchChange={handleSearchChange}
-            showSearchIcon={true}
-          />
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.headerBlock}>
+        <View style={[styles.headerRow, { paddingTop: insets.top + 6 }]}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+            <Icons.Back width={22} height={22} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Payments</Text>
+          <TouchableOpacity style={styles.searchButton} activeOpacity={0.7}>
+            <Icons.Search width={20} height={20} />
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          {/* Title Section */}
-          <View style={styles.titleSection}>
-            <Text style={styles.heading}>Invoices</Text>
-            <Text style={styles.description}>
-              Search for the doctors by your need or services.
-            </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
+          <View style={styles.totalCard}>
+            <Text style={styles.totalLabel}>Total Spent This Month</Text>
+            <Text style={styles.totalAmount}>$180.00</Text>
           </View>
 
-          {/* Invoice Cards */}
-          <View style={styles.cardsContainer}>
-            {invoices.map((invoice, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.invoiceCard}
-                onPress={() => handleCardPress(invoice)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.cardHeader}>
-                  <View style={styles.idLabel}>
-                    <Text style={styles.idText}>ID: {invoice.id}</Text>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <View style={styles.transactionsWrap}>
+            {payments.map((payment) => {
+              const isCompleted = payment.status === 'Completed';
+              return (
+                <View key={payment.id} style={styles.transactionCard}>
+                  <View style={[styles.iconWrap, isCompleted ? styles.iconWrapDone : styles.iconWrapPending]}>
+                    <Text style={[styles.iconText, isCompleted ? styles.iconTextDone : styles.iconTextPending]}>
+                      {isCompleted ? '✓' : '◷'}
+                    </Text>
                   </View>
-                  <View style={styles.statusLabel}>
-                    <Text style={styles.statusText}>{invoice.status}</Text>
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionTitle}>{payment.title}</Text>
+                    <Text style={styles.transactionDate}>{payment.date}</Text>
                   </View>
-                </View>
-
-                <View style={styles.serviceSection}>
-                  <View style={styles.serviceNameContainer}>
-                    <Text style={styles.sectionLabel}>Service</Text>
-                    <Text style={styles.serviceName}>{invoice.serviceName}</Text>
+                  <View style={styles.rightInfo}>
+                    <Text style={styles.transactionAmount}>{payment.amount}</Text>
+                    <Text style={[styles.transactionStatus, isCompleted ? styles.statusDone : styles.statusPending]}>
+                      {payment.status}
+                    </Text>
                   </View>
                 </View>
-
-                <View style={styles.amountSection}>
-                  <Text style={styles.detailLabel}>Amount:</Text>
-                  <Text style={styles.detailValue}>{invoice.amount}</Text>
-                </View>
-
-                <View style={styles.dateSection}>
-                  <Text style={styles.detailLabel}>Paid on:</Text>
-                  <Text style={styles.detailValue}>{invoice.paidDate}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -133,112 +116,144 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  headerBlock: {
+    backgroundColor: '#ECF2FD',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+  },
+  headerRow: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  searchButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   content: {
     paddingHorizontal: 15,
   },
-  titleSection: {
-    marginTop: 24,
-    marginBottom: 24,
-    gap: 8,
+  totalCard: {
+    marginTop: 18,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    padding: 20,
+    marginBottom: 22,
   },
-  heading: {
-    fontFamily: Fonts.raleway,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  description: {
+  totalLabel: {
     fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  cardsContainer: {
-    gap: 16,
-  },
-  invoiceCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    gap: 16,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  idLabel: {
-    backgroundColor: '#A473E5',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  idText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  statusLabel: {
-    backgroundColor: '#F0E8FB',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  statusText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-  },
-  serviceSection: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textLight,
+    color: '#BFDBFE',
     marginBottom: 8,
   },
-  serviceNameContainer: {
-    backgroundColor: '#EBEBEB',
-    borderRadius: 8,
-    padding: 12,
-    gap: 8,
+  totalAmount: {
+    fontFamily: Fonts.raleway,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  serviceName: {
+  sectionTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  transactionsWrap: {
+    gap: 12,
+  },
+  transactionCard: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconWrap: {
+    width: 72 / 2,
+    height: 72 / 2,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconWrapDone: {
+    backgroundColor: '#DDF5EE',
+  },
+  iconWrapPending: {
+    backgroundColor: '#E5E7EB',
+  },
+  iconText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  iconTextDone: {
+    color: '#10B981',
+  },
+  iconTextPending: {
+    color: '#6B7280',
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 3,
+  },
+  transactionDate: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#6B7280',
+  },
+  rightInfo: {
+    alignItems: 'flex-end',
+    marginLeft: 12,
+  },
+  transactionAmount: {
     fontFamily: Fonts.raleway,
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#111827',
+    marginBottom: 6,
   },
-  amountSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dateSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  detailLabel: {
+  transactionStatus: {
     fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textLight,
+    fontSize: 12,
+    fontWeight: '500',
   },
-  detailValue: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
+  statusDone: {
+    color: '#10B981',
+  },
+  statusPending: {
+    color: '#6B7280',
   },
 });
 
