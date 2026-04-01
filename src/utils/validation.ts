@@ -5,7 +5,7 @@ import * as yup from 'yup';
  * Set to false to disable all validation
  * Change this one value to turn validation on/off for all screens
  */
-export const VALIDATION_ENABLED = false;
+export const VALIDATION_ENABLED = true;
 
 /**
  * Sign In Validation Schema

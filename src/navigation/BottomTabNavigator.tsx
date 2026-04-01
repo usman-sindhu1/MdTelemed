@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform, View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { HomeStack, AppointmentsStack, PrescriptionStack, NotificationsStack, ChatStack } from './HomeStack';
 import Icons from '../assets/svg';
@@ -53,17 +53,16 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   }
 
   return (
-    <Animated.View 
-      style={[
-        styles.tabBarWrapper,
-        {
-          transform: [{ translateY }],
-        },
-      ]}
-    >
-      <View style={[styles.tabBarContainer, { 
-        marginBottom: Platform.OS === 'ios' ? insets.bottom : 0,
-      }]}>
+    <SafeAreaView style={styles.safeAreaTabBar} edges={['bottom']}>
+      <Animated.View
+        style={[
+          styles.tabBarWrapper,
+          {
+            transform: [{ translateY }],
+          },
+        ]}
+      >
+        <View style={styles.tabBarContainer}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label = options.tabBarLabel !== undefined
@@ -196,8 +195,9 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           </TouchableOpacity>
         );
       })}
-      </View>
-    </Animated.View>
+        </View>
+      </Animated.View>
+    </SafeAreaView>
   );
 };
 
@@ -259,14 +259,16 @@ export const BottomTabNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  tabBarWrapper: {
+  safeAreaTabBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: 'transparent',
+  },
+  tabBarWrapper: {
+    backgroundColor: 'transparent',
     paddingBottom: 0,
-    marginBottom: -15,
   },
   tabBarContainer: {
     flexDirection: 'row',
@@ -278,7 +280,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible', // Allow circle to extend above
-    marginBottom: 0,
+    marginBottom: Platform.select({
+      ios: 0,
+      android: 0, // lift tab bar a bit above system nav on Android
+      default: 0,
+    }),
     ...Platform.select({
       ios: {
         shadowColor: '#000',

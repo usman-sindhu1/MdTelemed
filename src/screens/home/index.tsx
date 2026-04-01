@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -22,9 +22,14 @@ import { useScrollContext } from '../../contexts/ScrollContext';
 const Home: React.FC = () => {
   const navigation = useNavigation();
   const { setIsScrollingDown } = useScrollContext();
-  const scrollY = useRef(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      setIsScrollingDown(false);
+    };
+  }, [setIsScrollingDown]);
 
   const handleProfilePress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -72,19 +77,12 @@ const Home: React.FC = () => {
     });
   };
 
-  const handleScroll = (event: any) => {
-    const currentScrollY = event.nativeEvent.contentOffset.y;
-    const scrollingDown = currentScrollY > scrollY.current;
-    
-    if (scrollingDown && currentScrollY > 50) {
-      // Scrolling down and past threshold
-      setIsScrollingDown(true);
-    } else if (!scrollingDown) {
-      // Scrolling up
-      setIsScrollingDown(false);
-    }
-    
-    scrollY.current = currentScrollY;
+  const handleScrollStart = () => {
+    setIsScrollingDown(true);
+  };
+
+  const handleScrollStop = () => {
+    setIsScrollingDown(false);
   };
 
   const handleRefresh = () => {
@@ -101,8 +99,10 @@ const Home: React.FC = () => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        onScrollBeginDrag={handleScrollStart}
+        onMomentumScrollBegin={handleScrollStart}
+        onScrollEndDrag={handleScrollStop}
+        onMomentumScrollEnd={handleScrollStop}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { PrescriptionStackParamList } from '../../navigation/HomeStack';
 import Icons from '../../assets/svg';
+import { useScrollContext } from '../../contexts/ScrollContext';
 
 type PrescriptionNavigationProp = NativeStackNavigationProp<
   PrescriptionStackParamList,
@@ -34,6 +35,13 @@ interface PrescriptionData {
 
 const Prescription: React.FC = () => {
   const navigation = useNavigation<PrescriptionNavigationProp>();
+  const { setIsScrollingDown } = useScrollContext();
+
+  useEffect(() => {
+    return () => {
+      setIsScrollingDown(false);
+    };
+  }, [setIsScrollingDown]);
 
   const prescriptions: PrescriptionData[] = [
     {
@@ -88,12 +96,24 @@ const Prescription: React.FC = () => {
     navigation.navigate('PrescriptionDetails');
   };
 
+  const handleScrollStart = () => {
+    setIsScrollingDown(true);
+  };
+
+  const handleScrollStop = () => {
+    setIsScrollingDown(false);
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={handleScrollStart}
+          onMomentumScrollBegin={handleScrollStart}
+          onScrollEndDrag={handleScrollStop}
+          onMomentumScrollEnd={handleScrollStop}
         >
           <View style={styles.headerContainer}>
             <HomeHeader

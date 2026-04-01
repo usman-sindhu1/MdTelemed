@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import HomeHeader from '../../components/common/HomeHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
+import { useScrollContext } from '../../contexts/ScrollContext';
 
 type AppointmentStatus = 'Upcoming' | 'Attended' | 'Cancelled' | 'Draft';
 type CategoryType = 'All' | AppointmentStatus;
@@ -34,7 +35,14 @@ type AppointmentsNavigationProp = NativeStackNavigationProp<AppointmentsStackPar
 
 const Appointments: React.FC = () => {
   const navigation = useNavigation<AppointmentsNavigationProp>();
+  const { setIsScrollingDown } = useScrollContext();
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('All');
+
+  useEffect(() => {
+    return () => {
+      setIsScrollingDown(false);
+    };
+  }, [setIsScrollingDown]);
 
   const categories: CategoryType[] = ['All', 'Upcoming', 'Attended', 'Cancelled', 'Draft'];
 
@@ -120,12 +128,24 @@ const Appointments: React.FC = () => {
     navigation.navigate('AppointmentDetails');
   };
 
+  const handleScrollStart = () => {
+    setIsScrollingDown(true);
+  };
+
+  const handleScrollStop = () => {
+    setIsScrollingDown(false);
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={handleScrollStart}
+          onMomentumScrollBegin={handleScrollStart}
+          onScrollEndDrag={handleScrollStop}
+          onMomentumScrollEnd={handleScrollStop}
         >
           <View style={styles.headerContainer}>
             <HomeHeader

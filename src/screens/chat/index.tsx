@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { ChatStackParamList } from '../../navigation/HomeStack';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
+import { useScrollContext } from '../../contexts/ScrollContext';
 
 interface ChatData {
   id: string;
@@ -32,6 +33,13 @@ type ChatNavigationProp = NativeStackNavigationProp<
 
 const Chat: React.FC = () => {
   const navigation = useNavigation<ChatNavigationProp>();
+  const { setIsScrollingDown } = useScrollContext();
+
+  useEffect(() => {
+    return () => {
+      setIsScrollingDown(false);
+    };
+  }, [setIsScrollingDown]);
 
   const chats: ChatData[] = [
     {
@@ -80,12 +88,24 @@ const Chat: React.FC = () => {
     navigation.navigate('InboxChat', { chatName: chat.name });
   };
 
+  const handleScrollStart = () => {
+    setIsScrollingDown(true);
+  };
+
+  const handleScrollStop = () => {
+    setIsScrollingDown(false);
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={handleScrollStart}
+          onMomentumScrollBegin={handleScrollStart}
+          onScrollEndDrag={handleScrollStop}
+          onMomentumScrollEnd={handleScrollStop}
         >
           <View style={styles.headerContainer}>
             <HomeHeader

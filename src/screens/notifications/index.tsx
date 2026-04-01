@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { DrawerActions } from '@react-navigation/native';
 import HomeHeader from '../../components/common/HomeHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
+import { useScrollContext } from '../../contexts/ScrollContext';
 
 interface NotificationData {
   id: string;
@@ -25,7 +26,14 @@ interface NotificationData {
 
 const Notifications: React.FC = () => {
   const navigation = useNavigation();
+  const { setIsScrollingDown } = useScrollContext();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Appointment' | 'Payment' | 'Prescription' | 'Push'>('All');
+
+  useEffect(() => {
+    return () => {
+      setIsScrollingDown(false);
+    };
+  }, [setIsScrollingDown]);
 
   const notifications: NotificationData[] = [
     {
@@ -109,12 +117,24 @@ const Notifications: React.FC = () => {
     }
   };
 
+  const handleScrollStart = () => {
+    setIsScrollingDown(true);
+  };
+
+  const handleScrollStop = () => {
+    setIsScrollingDown(false);
+  };
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={handleScrollStart}
+          onMomentumScrollBegin={handleScrollStart}
+          onScrollEndDrag={handleScrollStop}
+          onMomentumScrollEnd={handleScrollStop}
         >
           <View style={styles.headerContainer}>
             <HomeHeader
