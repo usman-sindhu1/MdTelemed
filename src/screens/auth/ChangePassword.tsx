@@ -6,9 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthStackParamList } from '../../navigation/AuthStack';
@@ -17,6 +18,9 @@ import PasswordInput from '../../components/PasswordInput';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { signUpSchema, validateField } from '../../utils/validation';
+import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
 
 const SURFACE_BASE = '#FFFFFF';
 const PRIMARY = '#2563EB';
@@ -33,11 +37,18 @@ type ChangePasswordScreenNavigationProp = NativeStackNavigationProp<AuthStackPar
 
 const ChangePassword: React.FC = () => {
   const navigation = useNavigation<ChangePasswordScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'ChangePassword'>>();
   const insets = useSafeAreaInsets();
+  const resetToken = route.params?.resetToken ?? '';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const { onRequest, isPending } = useApi<{ resetToken: string; newPassword: string }>({
+    key: 'new-password-after-reset',
+    isSuccessToast: false,
+  });
 
   const handlePasswordChange = async (field: string, value: string) => {
     if (field === 'newPassword') setNewPassword(value);
@@ -84,8 +95,23 @@ const ChangePassword: React.FC = () => {
     if (!pValid && pError) setErrors((prev) => ({ ...prev, newPassword: pError }));
     if (!cValid && cError) setErrors((prev) => ({ ...prev, confirmPassword: cError }));
     if (!pValid || !cValid) return;
+    if (!resetToken) {
+      showErrorToast('Session expired', 'Please request a new reset link.');
+      setTimeout(() => navigation.navigate('ResetPassword'), 500);
+      return;
+    }
     setErrors({});
-    navigation.navigate('SignIn');
+    onRequest({
+      path: authPaths.newPassword,
+      data: { resetToken, newPassword },
+      onSuccess: () => {
+        showSuccessToast('Password reset', 'You can sign in with your new password.');
+        setTimeout(() => navigation.navigate('SignIn'), 1800);
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Could not update password. Try again.');
+      },
+    });
   };
 
   const handleBack = () => navigation.goBack();
@@ -157,9 +183,20 @@ const ChangePassword: React.FC = () => {
                 error={errors.confirmPassword}
               />
             </View>
-            <TouchableOpacity style={styles.updateButton} onPress={handleUpdatePassword} activeOpacity={0.85}>
-              <Text style={styles.updateButtonText}>Update Password</Text>
-              <Text style={styles.updateButtonArrow}>→</Text>
+            <TouchableOpacity
+              style={[styles.updateButton, isPending && { opacity: 0.85 }]}
+              onPress={handleUpdatePassword}
+              activeOpacity={0.85}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <ActivityIndicator color={Colors.buttonText} />
+              ) : (
+                <>
+                  <Text style={styles.updateButtonText}>Update Password</Text>
+                  <Text style={styles.updateButtonArrow}>→</Text>
+                </>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>

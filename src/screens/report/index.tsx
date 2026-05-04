@@ -15,12 +15,8 @@ import Fonts from '../../constants/fonts';
 const Report: React.FC = () => {
   const navigation = useNavigation();
 
-  const handleMenuPress = () => {
+  const handleProfilePress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
-  };
-
-  const handleSearchPress = () => {
-    console.log('Search pressed');
   };
 
   const handleSearchChange = (text: string) => {
@@ -35,8 +31,7 @@ const Report: React.FC = () => {
       >
         <View style={styles.content}>
           <HomeHeader
-            onMenuPress={handleMenuPress}
-            onSearchPress={handleSearchPress}
+            onProfilePress={handleProfilePress}
             onSearchChange={handleSearchChange}
             showFeelingRow={false}
           />

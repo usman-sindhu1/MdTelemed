@@ -82,6 +82,7 @@ import HematologyIcon from './hematology.svg';
 import NeurologyServiceIcon from './neurology (1).svg';
 import PageInfoIcon from './page_info.svg';
 import Doctor1Icon from './doctor-1.svg';
+import SeeDoctorNowIcon from './doctor-see-now.svg';
 import StarFill1Icon from './star-fill-1.svg';
 import BxPlusMedicalIcon from './bx-plus-medical.svg';
 import BxPlusMedical1Icon from './bx-plus-medical-1.svg';
@@ -178,6 +179,7 @@ const Icons = {
   NeurologyServiceIcon,
   PageInfoIcon,
   Doctor1Icon,
+  SeeDoctorNowIcon,
   StarFill1Icon,
   BxPlusMedicalIcon,
   BxPlusMedical1Icon,

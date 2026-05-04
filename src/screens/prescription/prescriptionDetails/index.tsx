@@ -1,84 +1,174 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
-  Animated,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
 import Icons from '../../../assets/svg';
+import { usePrescriptionDetail } from '../../../hooks/usePrescriptionDetail';
+import type { PatientPrescriptionMedicine } from '../../../types/patientPrescriptions';
+import {
+  appointmentTypeToLabel,
+  formatDoctorNameDetail,
+  formatPrescriptionDetailDateTime,
+  buildMedicineScheduleLine,
+} from '../../../utils/prescriptionDisplay';
+import ShimmerBox from '../../../components/common/ShimmerBox';
+import { generateAndSharePrescriptionPdf } from '../../../utils/prescriptionPdfExport';
+import { showErrorToast } from '../../../utils/appToast';
+
+type PrescriptionDetailsParams = {
+  PrescriptionDetails: { prescriptionId: string };
+};
 
 const PrescriptionDetails: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const searchAnim = useRef(new Animated.Value(0)).current;
+  const route = useRoute<RouteProp<PrescriptionDetailsParams, 'PrescriptionDetails'>>();
+  const prescriptionId = route.params?.prescriptionId;
 
-  const prescriptionData = {
-    service: 'Skin Care',
-    date: 'Jan 23, 2025',
-    time: '04:37 pm',
-    id: '5646543',
-    doctorName: 'Dr. Joseph Chem',
-    qualifications: 'M.B.B.S., M.D., M.S.',
-    regNo: '1561235',
-    mobileNo: '+1 (234) 567-8900',
-    clinicName: 'Care Clinic',
-    clinicPhone: '09423380390',
-    clinicTiming: '09:00 AM - 11:59 AM',
-  };
+  const detailQuery = usePrescriptionDetail(prescriptionId);
+  const data = detailQuery.data;
+  const [pdfWorking, setPdfWorking] = useState(false);
 
-  const medicines = [
-    {
-      id: '1',
-      type: 'Tablet',
-      name: 'Demo Med Name 01',
-      dosage: '50mg',
-      duration: 'One Month',
-      takenTimes: '1 Morning, 1 Afternoon, 1 Evening, 1 Night',
-    },
-    {
-      id: '2',
-      type: 'Tablet',
-      name: 'Demo Med Name 01',
-      dosage: '50mg',
-      duration: 'One Month',
-      takenTimes: '1 Morning, 1 Afternoon, 1 Evening, 1 Night',
-    },
-  ];
+  const handleDownloadPress = useCallback(async () => {
+    if (!prescriptionId || !data) return;
+    try {
+      setPdfWorking(true);
+      await generateAndSharePrescriptionPdf(data, prescriptionId);
+    } catch (e) {
+      showErrorToast(
+        'Could not create PDF',
+        (e as Error)?.message ?? 'Try again later.',
+      );
+    } finally {
+      setPdfWorking(false);
+    }
+  }, [prescriptionId, data]);
 
-  const advice = 'Avoid oily and spicy foods.';
+  const prescription = data?.prescription;
+  const medicines = data?.medicines ?? [];
+  const appointment = data?.appointment;
+  const doctor = data?.doctor;
 
-  useEffect(() => {
-    Animated.timing(searchAnim, {
-      toValue: isSearchActive ? 1 : 0,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-  }, [isSearchActive, searchAnim]);
+  const serviceLabel = appointmentTypeToLabel(appointment?.appointmentType);
+  const createdRaw =
+    prescription?.createdAt && String(prescription.createdAt).trim()
+      ? prescription.createdAt
+      : undefined;
+  const { date: dateStr, time: timeStr } =
+    formatPrescriptionDetailDateTime(createdRaw);
 
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  const handleSearchPress = () => {
-    setIsSearchActive(true);
-  };
+  if (!prescriptionId) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={[styles.headerBlock, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleBackPress}
+            activeOpacity={0.7}
+          >
+            <Icons.Vector1Icon width={22} height={22} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centerBox}>
+          <Text style={styles.errorText}>Missing prescription.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const handleCloseSearch = () => {
-    setIsSearchActive(false);
-  };
+  if (detailQuery.isPending && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.headerBlock}>
+          <View style={[styles.headerContent, { paddingTop: insets.top + 12 }]}>
+            <View style={styles.headerActionsRow}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={handleBackPress}
+                activeOpacity={0.7}
+              >
+                <Icons.Vector1Icon width={22} height={22} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <Text style={styles.title}>Prescription Details</Text>
+            <View style={styles.downloadBtn}>
+              <ShimmerBox width={160} height={32} borderRadius={16} />
+            </View>
+            <View style={styles.infoRow}>
+              <ShimmerBox height={16} borderRadius={8} width="55%" />
+            </View>
+            <View style={styles.infoRow}>
+              <ShimmerBox height={16} borderRadius={8} width="45%" />
+            </View>
+            <View style={styles.doctorCard}>
+              <ShimmerBox height={72} borderRadius={12} width="100%" />
+            </View>
+            <Text style={styles.sectionTitle}>Prescribed Medicines</Text>
+            <View style={styles.medicinesContainer}>
+              <ShimmerBox height={96} borderRadius={12} width="100%" />
+            </View>
+            <Text style={styles.sectionTitle}>Medication instructions</Text>
+            <ShimmerBox height={56} borderRadius={12} width="100%" />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
-  const handleDownloadPress = () => {
-    console.log('Download pressed');
-  };
+  if (detailQuery.isError) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={[styles.headerBlock, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleBackPress}
+            activeOpacity={0.7}
+          >
+            <Icons.Vector1Icon width={22} height={22} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centerBox}>
+          <Text style={styles.errorText}>
+            {(detailQuery.error as Error)?.message ?? 'Could not load prescription.'}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => detailQuery.refetch()}
+          >
+            <Text style={styles.retryText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const advise = prescription?.advise?.trim();
+  const doctorName = formatDoctorNameDetail(doctor ?? undefined);
+  const doctorPhone =
+    doctor?.phone && String(doctor.phone).trim()
+      ? String(doctor.phone).trim()
+      : null;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -92,49 +182,6 @@ const PrescriptionDetails: React.FC = () => {
             >
               <Icons.Vector1Icon width={22} height={22} />
             </TouchableOpacity>
-            {!isSearchActive && (
-              <TouchableOpacity
-                style={styles.headerIconButton}
-                onPress={handleSearchPress}
-                activeOpacity={0.7}
-              >
-                <Icons.Search width={20} height={20} />
-              </TouchableOpacity>
-            )}
-            {isSearchActive && (
-              <Animated.View
-                style={[
-                  styles.searchBar,
-                  {
-                    opacity: searchAnim,
-                    transform: [
-                      {
-                        translateX: searchAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [80, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <Icons.Search width={18} height={18} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search"
-                  placeholderTextColor="#9CA3AF"
-                  value={searchText}
-                  onChangeText={setSearchText}
-                  autoFocus
-                />
-                <TouchableOpacity
-                  onPress={handleCloseSearch}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
           </View>
         </View>
       </View>
@@ -143,74 +190,98 @@ const PrescriptionDetails: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={detailQuery.isFetching && !detailQuery.isPending}
+            onRefresh={() => detailQuery.refetch()}
+            tintColor={Colors.primary}
+          />
+        }
       >
         <View style={styles.content}>
           <Text style={styles.title}>Prescription Details</Text>
-          <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadPress} activeOpacity={0.8}>
-            <Text style={styles.downloadBtnText}>Download Prescription</Text>
+          <TouchableOpacity
+            style={styles.downloadBtn}
+            onPress={handleDownloadPress}
+            activeOpacity={0.8}
+            disabled={pdfWorking}
+          >
+            {pdfWorking ? (
+              <ShimmerBox width={148} height={14} borderRadius={7} />
+            ) : (
+              <Text style={styles.downloadBtnText}>Download Prescription</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Service:</Text>
-            <Text style={styles.infoValue}>{prescriptionData.service}</Text>
+            <Text style={styles.infoValue}>{serviceLabel}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Date:</Text>
             <Text style={styles.infoValue}>
-              {prescriptionData.date} | {prescriptionData.time}
+              {dateStr}
+              {timeStr ? ` | ${timeStr}` : ''}
             </Text>
           </View>
 
-          {/* Doctor and Clinic Card */}
           <View style={styles.doctorCard}>
-            <View style={styles.idLabel}>
-              <Text style={styles.idText}>ID: {prescriptionData.id}</Text>
-            </View>
-
-            <Text style={styles.doctorName}>{prescriptionData.doctorName}</Text>
-            <Text style={styles.qualifications}>
-              {prescriptionData.qualifications} | Reg. No: {prescriptionData.regNo}
-            </Text>
-            <Text style={styles.mobileNo}>Mob. No: {prescriptionData.mobileNo}</Text>
-
-            <View style={styles.divider} />
-
-            <Text style={styles.clinicName}>{prescriptionData.clinicName}</Text>
-            <Text style={styles.clinicInfo}>Ph: {prescriptionData.clinicPhone}</Text>
-            <Text style={styles.clinicInfo}>{prescriptionData.clinicTiming}</Text>
+            <Text style={styles.doctorName}>{doctorName}</Text>
+            {doctorPhone ? (
+              <Text style={styles.mobileNo}>Mob. No: {doctorPhone}</Text>
+            ) : null}
           </View>
 
-          {/* Prescribed Medicines */}
           <Text style={styles.sectionTitle}>Prescribed Medicines</Text>
           <View style={styles.medicinesContainer}>
-            {medicines.map((medicine) => (
-              <View key={medicine.id} style={styles.medicineCard}>
-                <Text style={styles.medicineType}>{medicine.type}</Text>
-                <View style={styles.medicineHeader}>
-                  <Text style={styles.medicineName}>{medicine.name}</Text>
-                  <View style={styles.dosageBadge}>
-                    <Text style={styles.dosageText}>{medicine.dosage}</Text>
-                  </View>
-                </View>
-                <Text style={styles.medicineDetail}>
-                  Duration: {medicine.duration}
-                </Text>
-                <Text style={styles.medicineDetail}>
-                  Taken times: {medicine.takenTimes}
-                </Text>
-              </View>
+            {medicines.map((medicine: PatientPrescriptionMedicine, index: number) => (
+              <MedicineCard key={medicine.id ?? `m-${index}`} medicine={medicine} />
             ))}
           </View>
 
-          {/* Medication Instructions */}
-          <Text style={styles.sectionTitle}>Medication Instructions</Text>
-          <Text style={styles.adviceText}>{advice}</Text>
+          {advise ? (
+            <>
+              <Text style={styles.sectionTitle}>Medication instructions</Text>
+              <Text style={styles.adviceText}>{advise}</Text>
+            </>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
+
+function MedicineCard({ medicine }: { medicine: PatientPrescriptionMedicine }) {
+  const typeLabel =
+    medicine.medicineType && String(medicine.medicineType).trim()
+      ? String(medicine.medicineType).trim()
+      : 'Medicine';
+  const name = medicine.name?.trim() || '—';
+  const dosage = medicine.dosage?.trim();
+  const duration = medicine.duration?.trim();
+  const schedule = buildMedicineScheduleLine(medicine);
+
+  return (
+    <View style={styles.medicineCard}>
+      <Text style={styles.medicineType}>{typeLabel}</Text>
+      <View style={styles.medicineHeader}>
+        <Text style={styles.medicineName}>{name}</Text>
+        {dosage ? (
+          <View style={styles.dosageBadge}>
+            <Text style={styles.dosageText}>{dosage}</Text>
+          </View>
+        ) : null}
+      </View>
+      {duration ? (
+        <Text style={styles.medicineDetail}>Duration: {duration}</Text>
+      ) : null}
+      {schedule ? (
+        <Text style={styles.medicineDetail}>{schedule}</Text>
+      ) : null}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -230,7 +301,7 @@ const styles = StyleSheet.create({
   headerActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   headerIconButton: {
     width: 44,
@@ -244,30 +315,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 2,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginLeft: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchInput: {
-    flex: 1,
-    marginHorizontal: 8,
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    color: Colors.textPrimary,
-    paddingVertical: 0,
-  },
-  cancelText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -306,6 +353,7 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 4,
   },
   infoLabel: {
@@ -320,6 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: Colors.textPrimary,
     marginLeft: 4,
+    flex: 1,
   },
   doctorCard: {
     backgroundColor: '#F1F5F9',
@@ -328,50 +377,13 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 8,
   },
-  idLabel: {
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignSelf: 'flex-start',
-  },
-  idText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
   doctorName: {
     fontFamily: Fonts.raleway,
     fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginTop: 4,
-  },
-  qualifications: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
   },
   mobileNo: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginVertical: 8,
-  },
-  clinicName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  clinicInfo: {
     fontFamily: Fonts.openSans,
     fontSize: 14,
     fontWeight: '400',
@@ -405,6 +417,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
+    gap: 8,
   },
   medicineName: {
     fontFamily: Fonts.raleway,
@@ -414,11 +427,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dosageBadge: {
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   dosageText: {
     fontFamily: Fonts.openSans,
@@ -441,7 +455,31 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
+  centerBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  retryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+  },
+  retryText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
 });
 
 export default PrescriptionDetails;
-

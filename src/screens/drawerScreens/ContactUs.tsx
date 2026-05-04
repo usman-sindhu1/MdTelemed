@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,12 @@ import {
   TouchableOpacity,
   Linking,
   TextInput,
-  Image,
+  ActivityIndicator,
+  useWindowDimensions,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -16,247 +21,367 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
+import {
+  CONTACT_SUPPORT_EMAIL,
+  CONTACT_SUPPORT_PHONE_DISPLAY,
+  CONTACT_SUPPORT_PHONE_TEL,
+} from '../../constants/contactSupport';
+import { publicPaths } from '../../constants/publicPaths';
+import { publicPostJson } from '../../api/publicHttp';
+import type { SubmitUserQueryBody, UserQueryRecord } from '../../types/userQuery';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
+import { Svg, Path } from 'react-native-svg';
+import axios from 'axios';
 
 type ContactUsNavigationProp = NativeStackNavigationProp<
   DrawerParamList,
   'ContactUs'
 >;
 
-interface ContactInfo {
-  id: string;
-  type: 'phone' | 'email' | 'address';
-  label: string;
-  value: string;
-  action?: () => void;
+const LAYOUT_BREAKPOINT = 600;
+const FORM_BG = '#F0F7FF';
+
+/** Sent to API as `reason` (stable for admin filters). */
+const CONTACT_REASONS: { label: string; value: string }[] = [
+  { label: 'Billing', value: 'Billing' },
+  { label: 'Appointments', value: 'Appointments' },
+  { label: 'Technical support', value: 'Technical support' },
+  { label: 'Account', value: 'Account' },
+  { label: 'Other', value: 'Other' },
+];
+
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
 
 const ContactUs: React.FC = () => {
   const navigation = useNavigation<ContactUsNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isWide = width >= LAYOUT_BREAKPOINT;
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [contact, setContact] = useState('');
   const [reason, setReason] = useState('');
-  const [description, setDescription] = useState('');
+  const [message, setMessage] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [reasonModalVisible, setReasonModalVisible] = useState(false);
 
-  const contactInfo: ContactInfo[] = [
-    {
-      id: '1',
-      type: 'phone',
-      label: 'Phone Number',
-      value: '+1 (234) 567-8900',
-      action: () => Linking.openURL('tel:+12345678900'),
-    },
-    {
-      id: '2',
-      type: 'email',
-      label: 'Email Address',
-      value: 'support@mdtelemed.com',
-      action: () => Linking.openURL('mailto:support@mdtelemed.com'),
-    },
-    {
-      id: '3',
-      type: 'address',
-      label: 'Office Address',
-      value: '4517 Washington Ave. Manchester, Kentucky 39495',
-      action: () => {
-        // Open maps
-        const address = encodeURIComponent('4517 Washington Ave. Manchester, Kentucky 39495');
-        Linking.openURL(`https://maps.google.com/?q=${address}`);
-      },
-    },
-  ];
+  const reasonLabel = useMemo(
+    () => CONTACT_REASONS.find((r) => r.value === reason)?.label ?? '',
+    [reason],
+  );
+
+  const canSubmit = useMemo(() => {
+    return (
+      name.trim().length > 0 &&
+      isValidEmail(email) &&
+      contact.trim().length > 0 &&
+      reason.trim().length > 0 &&
+      message.trim().length > 0 &&
+      agreed
+    );
+  }, [name, email, contact, reason, message, agreed]);
 
   const handleBackPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleCopyPress = (text: string) => {
-    console.log('Copy pressed:', text);
-    // TODO: Implement copy to clipboard
-  };
-
-  const handleSendMessage = () => {
-    console.log('Send message', { name, email, phone, reason, description });
-  };
-
-  const renderContactIcon = (type: string) => {
-    switch (type) {
-      case 'phone':
-        return <Icons.Vector2Icon width={28} height={28} fill="#FFFFFF" />;
-      case 'email':
-        return <Icons.Vector5Icon width={28} height={28} fill="#FFFFFF" />;
-      case 'address':
-        return <Icons.VectorIcon width={28} height={28} fill="#FFFFFF" />;
-      default:
-        return null;
+  const submit = useCallback(async () => {
+    if (!canSubmit || submitting) return;
+    const body: SubmitUserQueryBody = {
+      name: name.trim(),
+      email: email.trim(),
+      contact: contact.trim(),
+      reason: reason.trim(),
+      message: message.trim(),
+    };
+    try {
+      setSubmitting(true);
+      await publicPostJson<UserQueryRecord, SubmitUserQueryBody>(
+        publicPaths.userQueries,
+        body,
+      );
+      showSuccessToast(
+        'Message sent',
+        'We typically respond within 24 hours.',
+      );
+      setName('');
+      setEmail('');
+      setContact('');
+      setReason('');
+      setMessage('');
+      setAgreed(false);
+    } catch (e) {
+      let detail = 'Please try again.';
+      if (axios.isAxiosError(e)) {
+        const data = e.response?.data as { message?: string } | undefined;
+        if (data?.message) {
+          detail = data.message;
+        } else if (e.message) {
+          detail = e.message;
+        }
+      } else if (e instanceof Error && e.message) {
+        detail = e.message;
+      }
+      showErrorToast('Could not send message', detail);
+    } finally {
+      setSubmitting(false);
     }
-  };
+  }, [canSubmit, submitting, name, email, contact, reason, message]);
+
+  const leftColumn = (
+    <View style={[styles.leftCol, isWide && styles.leftColWide]}>
+      <View style={styles.badge}>
+        <Icons.Chat1Icon width={14} height={14} fill="#FFFFFF" />
+        <Text style={styles.badgeText}>Get in Touch</Text>
+      </View>
+      <Text style={styles.heroTitle}>Contact Support</Text>
+      <Text style={styles.heroIntro}>
+        Have questions? We’re here to help. Reach out to our team and we’ll get
+        back to you as soon as possible. Your health is our priority.
+      </Text>
+
+      <TouchableOpacity
+        style={styles.infoBlock}
+        onPress={() => Linking.openURL(`mailto:${CONTACT_SUPPORT_EMAIL}`)}
+        activeOpacity={0.75}
+      >
+        <View style={styles.infoIconSq}>
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M4 6h16v12H4V6zm0 0l8 6 8-6"
+              stroke="#FFFFFF"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </View>
+        <View style={styles.infoTextCol}>
+          <Text style={styles.infoHeading}>Email Us</Text>
+          <Text style={styles.infoPrimary}>{CONTACT_SUPPORT_EMAIL}</Text>
+          <Text style={styles.infoMuted}>We’ll respond within 24 hours</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.infoBlock}
+        onPress={() => Linking.openURL(`tel:${CONTACT_SUPPORT_PHONE_TEL}`)}
+        activeOpacity={0.75}
+      >
+        <View style={styles.infoIconSq}>
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M6.5 3h3l1.5 4.5-2 1.5a12 12 0 006 6l1.5-2L21 14.5V18a2 2 0 01-2.2 2A17 17 0 013 5.2 2 2 0 015.2 3z"
+              stroke="#FFFFFF"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </View>
+        <View style={styles.infoTextCol}>
+          <Text style={styles.infoHeading}>Call Us</Text>
+          <Text style={styles.infoPrimary}>{CONTACT_SUPPORT_PHONE_DISPLAY}</Text>
+          <Text style={styles.infoMuted}>Available 24/7 for emergencies</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const formCard = (
+    <View style={[styles.formCard, isWide && styles.formCardWide]}>
+      <View style={styles.field}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Write here"
+          placeholderTextColor="#9CA3AF"
+          value={name}
+          onChangeText={setName}
+        />
+      </View>
+      <View style={styles.field}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Write here"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
+      <View style={styles.field}>
+        <Text style={styles.label}>Phone No.</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Write here"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="phone-pad"
+          value={contact}
+          onChangeText={setContact}
+        />
+      </View>
+      <View style={styles.field}>
+        <Text style={styles.label}>Reason of Contacting</Text>
+        <TouchableOpacity
+          style={styles.selectOuter}
+          onPress={() => setReasonModalVisible(true)}
+          activeOpacity={0.85}
+        >
+          <Text
+            style={[styles.selectText, !reason && styles.selectPlaceholder]}
+            numberOfLines={1}
+          >
+            {reason ? reasonLabel || reason : 'Write here'}
+          </Text>
+          <Text style={styles.chevron}>▾</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.field}>
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Write here"
+          placeholderTextColor="#9CA3AF"
+          multiline
+          textAlignVertical="top"
+          value={message}
+          onChangeText={setMessage}
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.checkboxRow}
+        onPress={() => setAgreed(!agreed)}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
+          {agreed ? <Text style={styles.checkMark}>✓</Text> : null}
+        </View>
+        <Text style={styles.checkboxLabel}>
+          I agree to the privacy policy and terms of service
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.submitBtn, (!canSubmit || submitting) && styles.submitBtnDisabled]}
+        onPress={submit}
+        disabled={!canSubmit || submitting}
+        activeOpacity={0.85}
+      >
+        {submitting ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <>
+            <Text style={styles.submitBtnText}>Send Message</Text>
+            <Text style={styles.submitArrow}>→</Text>
+          </>
+        )}
+      </TouchableOpacity>
+      <Text style={styles.formFooter}>We typically respond within 24 hours</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.headerContainer}>
         <View style={[styles.headerRow, { paddingTop: insets.top + 6 }]}>
-          <TouchableOpacity style={styles.headerIconButton} onPress={handleBackPress} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleBackPress}
+            activeOpacity={0.7}
+          >
             <Icons.Back width={22} height={22} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Contact Us</Text>
-          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7}>
-            <Image source={Icons.SearchPngIcon} style={styles.headerSearchIcon} />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Contact Support</Text>
+          <View style={styles.headerIconButton} />
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex1}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.content}>
-          <View style={styles.titleSection}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Get in Touch</Text>
-            </View>
-            <Text style={styles.heading}>Contact Us</Text>
-            <Text style={styles.description}>
-              Have questions? We are here to help. Reach out to our team and we will get back to you.
-            </Text>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom, 20) + 24 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View
+            style={[
+              styles.columns,
+              isWide ? styles.columnsWide : styles.columnsNarrow,
+            ]}
+          >
+            {leftColumn}
+            {formCard}
           </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          <View style={styles.formCard}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Write here"
-                placeholderTextColor="#9CA3AF"
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Write here"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone No.</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Write here"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Reason of Contacting</Text>
-              <View style={styles.selectWrap}>
-                <TextInput
-                  style={styles.selectInput}
-                  placeholder="Write here"
-                  placeholderTextColor="#9CA3AF"
-                  value={reason}
-                  onChangeText={setReason}
-                />
-                <Text style={styles.selectArrow}>▾</Text>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Write here"
-                placeholderTextColor="#9CA3AF"
-                multiline
-                textAlignVertical="top"
-                value={description}
-                onChangeText={setDescription}
-              />
-            </View>
-
-            <Text style={styles.termsText}>I agree to the privacy policy and terms of service.</Text>
-
-            <TouchableOpacity style={styles.sendButton} activeOpacity={0.8} onPress={handleSendMessage}>
-              <Text style={styles.sendButtonText}>Send Message</Text>
-            </TouchableOpacity>
-            <Text style={styles.responseText}>We typically respond within 24 hours</Text>
-          </View>
-
-          <View style={styles.contactCardsContainer}>
-            {contactInfo.map((info) => (
+      <Modal
+        visible={reasonModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReasonModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setReasonModalVisible(false)}
+        >
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Reason of Contacting</Text>
+            {CONTACT_REASONS.map((opt) => (
               <TouchableOpacity
-                key={info.id}
-                style={styles.contactCard}
-                onPress={info.action}
-                activeOpacity={0.7}
+                key={opt.value}
+                style={styles.modalRow}
+                onPress={() => {
+                  setReason(opt.value);
+                  setReasonModalVisible(false);
+                }}
               >
-                <View style={[
-                  styles.iconContainer,
-                  info.type === 'phone' && styles.iconContainerPhone,
-                  info.type === 'email' && styles.iconContainerEmail,
-                  info.type === 'address' && styles.iconContainerAddress,
-                ]}>
-                  {renderContactIcon(info.type)}
-                </View>
-                <View style={styles.infoContainer}>
-                  <Text style={styles.infoLabel}>{info.label}</Text>
-                  <Text style={styles.infoValue}>{info.value}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleCopyPress(info.value)}
-                  activeOpacity={0.7}
-                  style={styles.copyButton}
+                <Text
+                  style={[
+                    styles.modalRowText,
+                    reason === opt.value && styles.modalRowTextActive,
+                  ]}
                 >
-                  <Text style={styles.copyText}>↗</Text>
-                </TouchableOpacity>
+                  {opt.label}
+                </Text>
               </TouchableOpacity>
             ))}
-          </View>
-
-          <View style={styles.additionalInfoSection}>
-            <Text style={styles.sectionTitle}>Business Hours</Text>
-            <View style={styles.hoursContainer}>
-              <View style={styles.hoursRow}>
-                <Text style={styles.hoursDay}>Monday - Friday</Text>
-                <Text style={styles.hoursTime}>9:00 AM - 6:00 PM</Text>
-              </View>
-              <View style={styles.hoursRow}>
-                <Text style={styles.hoursDay}>Saturday</Text>
-                <Text style={styles.hoursTime}>10:00 AM - 4:00 PM</Text>
-              </View>
-              <View style={styles.hoursRow}>
-                <Text style={styles.hoursDay}>Sunday</Text>
-                <Text style={styles.hoursTime}>Closed</Text>
-              </View>
-            </View>
-          </View>
-
-        </View>
-      </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={() => setReasonModalVisible(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  flex1: { flex: 1 },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   headerContainer: {
     backgroundColor: '#ECF2FD',
-    zIndex: 10,
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomLeftRadius: 24,
@@ -272,10 +397,8 @@ const styles = StyleSheet.create({
   headerIconButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   headerTitle: {
     fontFamily: Fonts.raleway,
@@ -283,29 +406,39 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1F2937',
   },
-  headerSearchIcon: {
-    width: 18,
-    height: 18,
-    resizeMode: 'contain',
-  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
-  },
-  content: {
     paddingHorizontal: 15,
+    paddingTop: 16,
   },
-  titleSection: {
-    marginTop: 16,
-    marginBottom: 18,
-    gap: 10,
+  columns: {
+    gap: 22,
+  },
+  columnsWide: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  columnsNarrow: {
+    flexDirection: 'column',
+  },
+  leftCol: {
+    width: '100%',
+  },
+  leftColWide: {
+    flex: 2,
+    minWidth: 0,
+    maxWidth: '100%',
   },
   badge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: Colors.primary,
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
+    marginBottom: 12,
   },
   badgeText: {
     fontFamily: Fonts.raleway,
@@ -313,219 +446,237 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  heading: {
+  heroTitle: {
     fontFamily: Fonts.raleway,
-    fontSize: 36 / 2 * 2,
+    fontSize: 28,
     fontWeight: '800',
     color: Colors.textPrimary,
+    marginBottom: 10,
   },
-  description: {
+  heroIntro: {
     fontFamily: Fonts.openSans,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '400',
-    color: Colors.textSecondary,
-    lineHeight: 21,
-  },
-  formCard: {
-    backgroundColor: '#ECF2FD',
-    borderRadius: 18,
-    padding: 14,
+    color: '#64748B',
+    lineHeight: 22,
     marginBottom: 22,
-    gap: 10,
   },
-  inputGroup: {
-    gap: 6,
+  infoBlock: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    marginBottom: 18,
   },
-  inputLabel: {
+  infoIconSq: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  infoHeading: {
     fontFamily: Fonts.openSans,
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  infoPrimary: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  infoMuted: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: '#94A3B8',
+    lineHeight: 18,
+  },
+  formCard: {
+    width: '100%',
+    backgroundColor: FORM_BG,
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2EEF9',
+  },
+  formCardWide: {
+    flex: 3,
+    minWidth: 0,
+  },
+  field: {
+    marginBottom: 14,
+  },
+  label: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 8,
   },
   input: {
-    height: 46,
-    borderRadius: 12,
+    minHeight: 48,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     color: Colors.textPrimary,
     fontFamily: Fonts.openSans,
-    fontSize: 14,
+    fontSize: 15,
   },
-  selectWrap: {
-    height: 46,
-    borderRadius: 12,
+  selectOuter: {
+    minHeight: 48,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  selectInput: {
+  selectText: {
     flex: 1,
-    color: Colors.textPrimary,
     fontFamily: Fonts.openSans,
-    fontSize: 14,
-    paddingVertical: 0,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    paddingVertical: 12,
   },
-  selectArrow: {
-    fontSize: 14,
+  selectPlaceholder: {
     color: '#9CA3AF',
   },
+  chevron: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginLeft: 8,
+  },
   textArea: {
-    height: 90,
-    paddingTop: 12,
+    minHeight: 120,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
-  termsText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    color: '#6B7280',
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
+    marginTop: 4,
   },
-  sendButton: {
-    height: 46,
-    borderRadius: 999,
-    backgroundColor: Colors.primary,
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+    marginTop: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 2,
   },
-  sendButtonText: {
+  checkboxOn: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkMark: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 20,
+  },
+  submitBtn: {
+    minHeight: 52,
+    borderRadius: 999,
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+  submitBtnDisabled: {
+    opacity: 0.5,
+  },
+  submitBtnText: {
     fontFamily: Fonts.raleway,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  responseText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  contactCardsContainer: {
-    gap: 12,
-    marginBottom: 22,
-  },
-  contactCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 4,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  iconContainerPhone: {
-    backgroundColor: '#4CAF50',
-  },
-  iconContainerEmail: {
-    backgroundColor: '#2196F3',
-  },
-  iconContainerAddress: {
-    backgroundColor: '#FF9800',
-  },
-  infoContainer: {
-    flex: 1,
-    gap: 4,
-  },
-  infoLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textLight,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    lineHeight: 20,
-  },
-  copyButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F4F4F5',
-  },
-  copyText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  additionalInfoSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontFamily: Fonts.raleway,
+  submitArrow: {
     fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  },
-  hoursContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-  },
-  hoursDay: {
-    fontFamily: Fonts.raleway,
-    fontSize: 15,
+    color: '#FFFFFF',
     fontWeight: '600',
+  },
+  formFooter: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 14,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 28,
+    paddingTop: 12,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalRow: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalRowText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 16,
     color: Colors.textPrimary,
   },
-  hoursTime: {
-    fontFamily: Fonts.raleway,
-    fontSize: 15,
-    fontWeight: '700',
+  modalRowTextActive: {
     color: Colors.primary,
+    fontWeight: '700',
+  },
+  modalCancel: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
   },
 });
 
 export default ContactUs;
-

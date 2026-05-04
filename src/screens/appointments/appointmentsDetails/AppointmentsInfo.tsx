@@ -3,91 +3,114 @@ import {
   View,
   Text,
   StyleSheet,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
+import type { PatientAppointmentDetailPayload } from '../../../types/patientAppointments';
+import { buildAppointmentInfoRows } from '../../../utils/appointmentDetailDisplay';
 
-const AppointmentsInfo: React.FC = () => {
-  const appointmentData = {
-    appointmentId: 'Skin Allergy',
-    service: 'Allergy',
-    date: 'Thu, Jan 29, 2025',
-    timeSlot: '11:00 pm',
-    feeStatus: 'Paid',
-  };
+export interface AppointmentsInfoProps {
+  detail: PatientAppointmentDetailPayload | undefined;
+  appointmentId: string | undefined;
+  isLoading: boolean;
+}
 
-  const appointmentWith = {
-    doctorName: 'Ahmad Aslam',
-    contactNo: '+1 (234) 567-8900',
-    email: 'admin@fmh.com',
-    website: 'fatimamemorialhospital.com',
-  };
+const AppointmentsInfo: React.FC<AppointmentsInfoProps> = ({
+  detail,
+  appointmentId,
+  isLoading,
+}) => {
+  const { width } = useWindowDimensions();
+  const isWide = width >= 600;
+  const rows = buildAppointmentInfoRows(detail, appointmentId);
 
-  const InfoRow = ({ label, value }: { label: string; value: string }) => (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+  const Field = ({ label, value }: { label: string; value: string }) => (
+    <View style={[styles.field, isWide && styles.fieldWide]}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value}</Text>
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-      {/* Overview Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <InfoRow label="Appointment Id:" value={appointmentData.appointmentId} />
-        <InfoRow label="Service:" value={appointmentData.service} />
-        <InfoRow label="Date:" value={appointmentData.date} />
-        <InfoRow label="Time slot:" value={appointmentData.timeSlot} />
-        <InfoRow label="Fee status:" value={appointmentData.feeStatus} />
+  if (isLoading && !detail) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
+    );
+  }
 
-      {/* Appointment With Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Appointment With</Text>
-        <InfoRow label="Doctor name:" value={appointmentWith.doctorName} />
-        <InfoRow label="Contact no:" value={appointmentWith.contactNo} />
-        <InfoRow label="Email:" value={appointmentWith.email} />
-        <InfoRow label="Website:" value={appointmentWith.website} />
+  return (
+    <View style={styles.card}>
+      <View style={[styles.gridRow, isWide && styles.gridRowWide]}>
+        <Field label="Appt Id" value={rows.apptId} />
+        <Field label="Service" value={rows.service} />
+        <Field label="Appt For" value={rows.apptFor} />
+      </View>
+      <View style={[styles.gridRow, isWide && styles.gridRowWide]}>
+        <Field label="Call Type" value={rows.callType} />
+        <Field label="Appt Date" value={rows.apptDate} />
+        <Field label="Appt Time" value={rows.apptTime} />
+      </View>
+      <View style={styles.locationBlock}>
+        <Field label="Location" value={rows.location} />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 24,
+  loading: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  section: {
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
     gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  sectionTitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 8,
+  gridRow: {
+    gap: 12,
   },
-  infoRow: {
+  gridRowWide: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-    gap: 4,
+    flexWrap: 'wrap',
   },
-  infoLabel: {
+  field: {
+    flexGrow: 1,
+    flexBasis: '100%',
+    minWidth: 0,
+  },
+  fieldWide: {
+    flexBasis: '30%',
+    minWidth: 140,
+  },
+  locationBlock: {
+    marginTop: 4,
+  },
+  label: {
     fontFamily: Fonts.openSans,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '400',
     color: Colors.textLight,
+    marginBottom: 4,
   },
-  infoValue: {
+  value: {
     fontFamily: Fonts.openSans,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '400',
     color: Colors.textPrimary,
-    marginLeft: 4,
   },
 });
 
 export default AppointmentsInfo;
-

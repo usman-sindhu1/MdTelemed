@@ -14,10 +14,10 @@ export type AuthStackParamList = {
   Onboarding: undefined;
   SignIn: undefined;
   SignUp: undefined;
-  VerifyEmail: undefined;
+  VerifyEmail: { email: string };
   ResetPassword: undefined;
-  VerifyCode: undefined;
-  ChangePassword: undefined;
+  VerifyCode: { email: string };
+  ChangePassword: { resetToken: string };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();

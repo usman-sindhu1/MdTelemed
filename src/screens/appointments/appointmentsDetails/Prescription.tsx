@@ -67,7 +67,13 @@ const Prescription: React.FC = () => {
           </View>
         );
       case 'Conversations':
-        return <Conversation />;
+        return (
+          <Conversation
+            doctorDisplayName={prescriptionData.doctorName}
+            messages={[]}
+            onSend={() => {}}
+          />
+        );
       case 'Notes':
         return (
           <View style={styles.placeholderContainer}>

@@ -17,6 +17,7 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import { logout } from '../../store/slices/authSlice';
+import { clearAuthSession } from '../../utils/authSession';
 
 interface DrawerItem {
   id: string;
@@ -51,16 +52,13 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
         'Invoices': 'invoices',
         'InvoiceDetails': 'invoices',
         'RatingsAndReviews': 'rating',
-        'ReviewDetails': 'rating',
         'ProfileSettings': 'profile-settings',
         'ProfileDetails': 'profile-settings',
         'ChangePassword': 'change-password',
         'Doctors': 'doctors',
         'DoctorDetails': 'doctors',
-        'Services': 'services',
         'ContactUs': 'contact',
         'MedicalInfo': 'medical-info',
-        'MedicalRecords': 'medical-records',
         'NotificationSettings': 'profile-settings',
         'HelpAndFaqs': 'profile-settings',
         'TermsAndConditions': 'profile-settings',
@@ -120,15 +118,6 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
       icon: <Icons.Chat1Icon width={24} height={24} />,
     },
     {
-      id: 'services',
-      label: 'Categories',
-      icon: (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-          <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="#000" strokeWidth="1.5" fill="none" />
-        </Svg>
-      ),
-    },
-    {
       id: 'doctors',
       label: 'Doctors',
       icon: <Icons.Vector6Icon width={24} height={24} />,
@@ -153,21 +142,11 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     },
     {
       id: 'medical-info',
-      label: 'Medical Info',
+      label: 'Medical History',
       icon: (
         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
           <Rect x="4" y="4" width="16" height="16" rx="2" stroke="#000" strokeWidth="1.5" />
           <SvgText x="12" y="16" fontSize="12" fontWeight="bold" textAnchor="middle" fill="#000">A</SvgText>
-        </Svg>
-      ),
-    },
-    {
-      id: 'medical-records',
-      label: 'Medical Records',
-      icon: (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-          <Rect x="5" y="3" width="14" height="18" rx="2.5" stroke="#000" strokeWidth="1.5" fill="none" />
-          <Path d="M8 8h8M8 12h8M8 16h5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
         </Svg>
       ),
     },
@@ -239,18 +218,11 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     } else if (itemId === 'doctors') {
       // Navigate to Doctors screen
       props.navigation.navigate('Doctors');
-    } else if (itemId === 'services') {
-      // Navigate to Services screen
-      props.navigation.navigate('Services');
     } else if (itemId === 'contact') {
       // Navigate to Contact Us screen
       props.navigation.navigate('ContactUs');
     } else if (itemId === 'medical-info') {
-      // Navigate to Medical Info screen
       props.navigation.navigate('MedicalInfo');
-    } else if (itemId === 'medical-records') {
-      // Navigate to Medical Records screen
-      props.navigation.navigate('MedicalRecords');
     } else if (itemId === 'language') {
       // Navigate to Language screen
       props.navigation.navigate('Language');
@@ -270,9 +242,8 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     props.navigation.closeDrawer();
     
     // Simulate logout process (e.g., API call, clearing storage, etc.)
-    setTimeout(() => {
-      // Dispatch logout action - this will update Redux state
-      // RootNavigator will automatically switch to AuthStack when isAuthenticated becomes false
+    setTimeout(async () => {
+      await clearAuthSession();
       dispatch(logout());
       setIsLoggingOut(false);
     }, 1000);
@@ -280,14 +251,6 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
 
   const renderDrawerItem = (item: DrawerItem) => {
     const isActive = activeItemId === item.id;
-    const iconNode = item.id === 'medical-records'
-      ? (
-        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-          <Rect x="5" y="3" width="14" height="18" rx="2.5" stroke="#000" strokeWidth="1.5" fill="none" />
-          <Path d="M8 8h8M8 12h8M8 16h5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" />
-        </Svg>
-      )
-      : item.icon;
 
     return (
       <TouchableOpacity
@@ -300,7 +263,7 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
         activeOpacity={0.7}
       >
         <View style={styles.iconContainer}>
-          {iconNode}
+          {item.icon}
         </View>
         <Text style={[
           styles.drawerItemText,

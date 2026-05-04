@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
-  Animated,
+  RefreshControl,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
@@ -15,144 +15,122 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
+import { usePatientMedicalHistory } from '../../hooks/usePatientMedicalHistory';
+import ShimmerBox from '../../components/common/ShimmerBox';
+import type { PatientMedicalReport } from '../../types/patientMedicalHistory';
+import { formatMedicalReportDate } from '../../utils/medicalHistoryDisplay';
+import { showErrorToast } from '../../utils/appToast';
 
 type MedicalInfoNavigationProp = NativeStackNavigationProp<
   DrawerParamList,
   'MedicalInfo'
 >;
 
-type TabType = 'Medical Info' | 'Reports';
+function reportReasonText(
+  report: PatientMedicalReport,
+  globalReason: string | undefined | null,
+): string {
+  const d = report.description?.trim();
+  if (d) return d;
+  const g = globalReason?.trim();
+  if (g) return g;
+  return '—';
+}
+
+const ReportCard: React.FC<{
+  report: PatientMedicalReport;
+  globalReason: string | undefined | null;
+  onViewReport: (url: string) => void;
+}> = ({ report, globalReason, onViewReport }) => {
+  const reason = reportReasonText(report, globalReason);
+  const dateStr = formatMedicalReportDate(report.createdAt);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconCircle}>
+          <Icons.Report width={22} height={22} fill={Colors.primary} />
+        </View>
+        <View style={styles.cardHeaderText}>
+          <Text style={styles.cardTitle} numberOfLines={3}>
+            {report.title?.trim() || 'Report'}
+          </Text>
+          <Text style={styles.cardDate}>{dateStr}</Text>
+        </View>
+      </View>
+      <View style={styles.divider} />
+      <Text style={styles.reasonLabel}>Reason for appointment</Text>
+      <Text style={styles.reasonBody}>{reason}</Text>
+      <TouchableOpacity
+        style={styles.viewLinkWrap}
+        onPress={() => onViewReport(report.fileUrl)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.viewLink}>View report</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const ReportCardSkeleton: React.FC = () => (
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <ShimmerBox width={48} height={48} borderRadius={24} />
+      <View style={{ flex: 1, gap: 8 }}>
+        <ShimmerBox height={18} borderRadius={6} width="90%" />
+        <ShimmerBox height={14} borderRadius={5} width={120} />
+      </View>
+    </View>
+    <View style={styles.divider} />
+    <ShimmerBox height={12} borderRadius={4} width={140} style={{ marginBottom: 8 }} />
+    <ShimmerBox height={16} borderRadius={6} width="100%" />
+    <ShimmerBox height={14} borderRadius={4} width={80} style={{ alignSelf: 'flex-start', marginTop: 12 }} />
+  </View>
+);
 
 const MedicalInfo: React.FC = () => {
   const navigation = useNavigation<MedicalInfoNavigationProp>();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<TabType>('Medical Info');
-  const [isScrolling, setIsScrolling] = useState(false);
-  const [isAtBottom, setIsAtBottom] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const buttonContainerHeight = 100;
+  const query = usePatientMedicalHistory();
+
+  const medicalInfo = query.data?.medicalInfo ?? null;
+  const reports = query.data?.reports ?? [];
+  const globalReason = medicalInfo?.reasonForAppointment;
 
   const handleBackPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleEditPress = () => {
-    console.log('Edit Medical Details pressed');
-  };
-
-  useEffect(() => {
-    if (isScrolling || isAtBottom) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+  const openReport = useCallback(async (url: string) => {
+    try {
+      const u = url?.trim();
+      if (!u) {
+        showErrorToast('Cannot open report', 'Missing file link.');
+        return;
+      }
+      const supported = await Linking.canOpenURL(u);
+      if (supported) {
+        await Linking.openURL(u);
+      } else {
+        showErrorToast(
+          'Cannot open link',
+          'This file type may not be supported on your device.',
+        );
+      }
+    } catch (e) {
+      showErrorToast(
+        'Could not open report',
+        (e as Error)?.message ?? 'Try again later.',
+      );
     }
-  }, [isScrolling, isAtBottom]);
+  }, []);
 
-  const medicalDetails = [
-    { id: '1', label: 'First Therapy', value: 'Yes', icon: Icons.Report },
-    { id: '2', label: 'Taking Medicine', value: 'Yes', icon: Icons.Report },
-    { id: '3', label: 'Last Visit', value: 'No visits', icon: Icons.CalendarAltIcon },
-    { id: '4', label: 'Pre Condition', value: 'Normal', icon: Icons.Report },
-    { id: '5', label: 'Current Condition', value: 'Normal', icon: Icons.Report },
-    { id: '6', label: 'Appointment For', value: 'self', icon: Icons.VectorIcon },
-  ];
-
-  const renderMedicalInfoTab = () => (
-    <View style={styles.tabContent}>
-      {/* Doctor/Patient Card */}
-      <View style={styles.doctorCard}>
-        <View style={styles.doctorInfo}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.placeholderAvatar} />
-          </View>
-          <View style={styles.doctorDetails}>
-            <Text style={styles.doctorName}>Dr. Dr Maahi</Text>
-            <View style={styles.dateTimeRow}>
-              <Icons.VectorIcon width={16} height={16} fill={Colors.textSecondary} />
-              <Text style={styles.dateTimeText}>Nov 18, 2025</Text>
-            </View>
-            <View style={styles.dateTimeRow}>
-              <Icons.CalendarAltIcon width={16} height={16} fill={Colors.textSecondary} />
-              <Text style={styles.dateTimeText}>2:30 AM</Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>No_Show</Text>
-        </View>
-      </View>
-
-      {/* Medical Details Grid */}
-      <View style={styles.gridContainer}>
-        {medicalDetails.map((detail) => {
-          const DetailIcon = detail.icon;
-          return (
-            <View key={detail.id} style={styles.detailCard}>
-              <View style={styles.detailIconContainer}>
-                <DetailIcon width={24} height={24} fill={Colors.primary} />
-              </View>
-              <Text style={styles.detailLabel}>{detail.label}</Text>
-              <Text style={styles.detailValue}>{detail.value}</Text>
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Issue Description Card */}
-      <View style={styles.issueCard}>
-        <Text style={styles.issueTitle}>Issue Description</Text>
-        <Text style={styles.issueText}>Wefwefwefwef</Text>
-      </View>
-    </View>
-  );
-
-  const renderReportsTab = () => (
-    <View style={styles.tabContent}>
-      {/* Doctor/Patient Card */}
-      <View style={styles.doctorCard}>
-        <View style={styles.doctorInfo}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.placeholderAvatar} />
-          </View>
-          <View style={styles.doctorDetails}>
-            <Text style={styles.doctorName}>Dr Maahi</Text>
-            <Text style={styles.dateTimeTextSingle}>Nov 18, 2025 at 2:30 AM</Text>
-          </View>
-        </View>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>No_Show</Text>
-        </View>
-      </View>
-
-      {/* Medical Reports Section */}
-      <View style={styles.reportsSection}>
-        <Text style={styles.reportsTitle}>Medical Reports</Text>
-        <View style={styles.reportItem}>
-          <View style={styles.reportIconContainer}>
-            <Icons.Report width={24} height={24} fill={Colors.primary} />
-          </View>
-          <Text style={styles.reportName}>Report 1</Text>
-          <TouchableOpacity style={styles.viewButton} activeOpacity={0.7}>
-            <Icons.EyeIcon width={20} height={20} fill={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
+  const showSkeleton = query.isPending;
+  const showError = query.isError && !showSkeleton;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      {/* Fixed Header */}
-      <View style={styles.headerContainer}>
+      <View style={styles.headerBlock}>
         <View style={[styles.headerRow, { paddingTop: insets.top + 6 }]}>
           <TouchableOpacity
             style={styles.backButton}
@@ -167,103 +145,66 @@ const MedicalInfo: React.FC = () => {
       </View>
 
       <ScrollView
-        ref={scrollViewRef}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: buttonContainerHeight + (Platform.OS === 'ios' ? insets.bottom : 0) }
+          { paddingBottom: Math.max(insets.bottom, 16) + 32 },
         ]}
         showsVerticalScrollIndicator={false}
-        onScrollBeginDrag={() => setIsScrolling(true)}
-        onScrollEndDrag={() => setIsScrolling(false)}
-        onMomentumScrollBegin={() => setIsScrolling(true)}
-        onMomentumScrollEnd={() => setIsScrolling(false)}
-        onScroll={(event) => {
-          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-          const scrollY = contentOffset.y;
-          const contentHeight = contentSize.height;
-          const scrollViewHeight = layoutMeasurement.height;
-          const isNearBottom = scrollY + scrollViewHeight >= contentHeight - 50; // 50px threshold
-          
-          if (isNearBottom) {
-            setIsAtBottom(true);
-          } else if (scrollY < 100) {
-            // Near top
-            setIsAtBottom(false);
-          }
-        }}
-        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={query.isRefetching && !query.isPending}
+            onRefresh={() => query.refetch()}
+            tintColor={Colors.primary}
+          />
+        }
       >
-        <View style={styles.content}>
-          {/* Tabs */}
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'Medical Info' && styles.tabActive,
-              ]}
-              onPress={() => setActiveTab('Medical Info')}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'Medical Info' && styles.tabTextActive,
-                ]}
-              >
-                Medical Info
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'Reports' && styles.tabActive,
-              ]}
-              onPress={() => setActiveTab('Reports')}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'Reports' && styles.tabTextActive,
-                ]}
-              >
-                Reports
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.inner}>
+          <Text style={styles.pageTitle}>Full Medical History</Text>
+          <Text style={styles.pageSubtitle}>
+            All your medical history records.
+          </Text>
 
-          {/* Tab Content */}
-          {activeTab === 'Medical Info' ? renderMedicalInfoTab() : renderReportsTab()}
+          {showSkeleton ? (
+            <View style={styles.skeletonStack}>
+              {[0, 1, 2].map((i) => (
+                <ReportCardSkeleton key={`mh-sk-${i}`} />
+              ))}
+            </View>
+          ) : showError ? (
+            <Text style={styles.errorText}>
+              {(query.error as Error)?.message ??
+                'Could not load medical history.'}
+            </Text>
+          ) : (
+            <>
+              {globalReason?.trim() && reports.length === 0 ? (
+                <View style={styles.globalReasonCard}>
+                  <Text style={styles.reasonLabel}>Reason for appointment</Text>
+                  <Text style={styles.reasonBody}>{globalReason.trim()}</Text>
+                  <Text style={styles.hintMuted}>
+                    No report files uploaded yet. When your provider adds
+                    reports, they will appear below.
+                  </Text>
+                </View>
+              ) : null}
+
+              {reports.map((report) => (
+                <View key={report.id} style={styles.cardGap}>
+                  <ReportCard
+                    report={report}
+                    globalReason={globalReason}
+                    onViewReport={openReport}
+                  />
+                </View>
+              ))}
+
+              {reports.length === 0 && !globalReason?.trim() ? (
+                <Text style={styles.emptyText}>No reports yet.</Text>
+              ) : null}
+            </>
+          )}
         </View>
       </ScrollView>
-
-      {/* Bottom Button - Animated */}
-      <Animated.View
-        style={[
-          styles.buttonContainer,
-          {
-            paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20,
-            opacity: fadeAnim,
-            transform: [
-              {
-                translateY: fadeAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [50, 0],
-                }),
-              },
-            ],
-            pointerEvents: (isScrolling || isAtBottom) ? 'auto' : 'none',
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={handleEditPress}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.editButtonText}>Edit Medical Details</Text>
-        </TouchableOpacity>
-      </Animated.View>
     </SafeAreaView>
   );
 };
@@ -273,9 +214,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  headerContainer: {
+  headerBlock: {
     backgroundColor: '#ECF2FD',
-    zIndex: 10,
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomLeftRadius: 24,
@@ -307,270 +247,134 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  content: {
+  inner: {
     paddingHorizontal: 15,
+    paddingTop: 20,
   },
-  heading: {
+  pageTitle: {
     fontFamily: Fonts.raleway,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginTop: 24,
+    marginBottom: 8,
+  },
+  pageSubtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#64748B',
     marginBottom: 20,
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 20,
-    padding: 4,
-    marginTop: 12,
-    marginBottom: 24,
-    gap: 8,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabActive: {
-    backgroundColor: Colors.primary,
-  },
-  tabText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  tabTextActive: {
-    color: '#FFFFFF',
-  },
-  tabContent: {
-    gap: 16,
-  },
-  doctorCard: {
+  card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    borderColor: '#E8ECF1',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
-  doctorInfo: {
+  cardGap: {
+    marginBottom: 14,
+  },
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
-    flex: 1,
   },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    overflow: 'hidden',
-    backgroundColor: Colors.backgroundLight,
-  },
-  placeholderAvatar: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.primaryLight,
-  },
-  doctorDetails: {
-    flex: 1,
-    gap: 6,
-  },
-  doctorName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  dateTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dateTimeText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-  },
-  dateTimeTextSingle: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  statusBadge: {
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  statusText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  detailCard: {
-    width: '47%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  detailIconContainer: {
+  iconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#ECF2FD',
-    justifyContent: 'center',
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  detailLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textLight,
-    textAlign: 'center',
+  cardHeaderText: {
+    flex: 1,
+    minWidth: 0,
   },
-  detailValue: {
+  cardTitle: {
     fontFamily: Fonts.raleway,
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '700',
     color: Colors.textPrimary,
-    textAlign: 'center',
+    marginBottom: 6,
   },
-  issueCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
+  cardDate: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#64748B',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 14,
+  },
+  reasonLabel: {
+    fontFamily: Fonts.openSans,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 8,
+  },
+  reasonBody: {
+    fontFamily: Fonts.openSans,
+    fontSize: 15,
+    fontWeight: '400',
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  },
+  viewLinkWrap: {
+    alignSelf: 'flex-start',
+    marginTop: 14,
+    paddingVertical: 4,
+  },
+  viewLink: {
+    fontFamily: Fonts.openSans,
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  globalReasonCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 16,
   },
-  issueTitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  issueText: {
+  hintMuted: {
     fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 12,
     lineHeight: 20,
   },
-  reportsSection: {
-    gap: 16,
+  skeletonStack: {
+    gap: 14,
   },
-  reportsTitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+  emptyText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 15,
+    color: '#64748B',
+    textAlign: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
   },
-  reportItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  reportIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.backgroundLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reportName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    flex: 1,
-  },
-  viewButton: {
-    padding: 8,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 15,
-    paddingTop: 12,
-    backgroundColor: 'transparent',
-    zIndex: 1,
-  },
-  editButton: {
-    width: '100%',
-    height: 56,
-    borderRadius: 80,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  editButtonText: {
-    fontFamily: Fonts.raleway,
+  errorText: {
+    fontFamily: Fonts.openSans,
     fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#B91C1C',
+    textAlign: 'center',
+    paddingVertical: 24,
   },
 });
 
 export default MedicalInfo;
-

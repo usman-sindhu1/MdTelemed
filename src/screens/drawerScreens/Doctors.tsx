@@ -1,93 +1,133 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  Image,
+  FlatList,
+  RefreshControl,
+  TextInput,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
+import { usePublicDoctorsInfinite } from '../../hooks/usePublicDoctorsInfinite';
+import type { PublicDoctorProfile } from '../../types/publicDoctors';
+import TopDoctorCard, {
+  TopDoctorCardSkeleton,
+} from '../../components/homecomponents/TopDoctorCard';
+import ListPaginationFooter from '../../components/common/ListPaginationFooter';
 
 type DoctorsNavigationProp = NativeStackNavigationProp<
   DrawerParamList,
   'Doctors'
 >;
 
-interface DoctorData {
-  id: string | number;
-  name: string;
-  specialty: string;
-  rating: string;
-  years: string;
-  patients: string;
-  fee: string;
-  imageUri: string;
-}
+const SEARCH_DEBOUNCE_MS = 400;
+const LIST_SKELETON_COUNT = 3;
 
 const Doctors: React.FC = () => {
   const navigation = useNavigation<DoctorsNavigationProp>();
   const insets = useSafeAreaInsets();
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const doctors: DoctorData[] = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      specialty: 'Allergies',
-      rating: '4.8',
-      years: '12 years',
-      patients: '1.2k patients',
-      fee: '$50',
-      imageUri: 'https://randomuser.me/api/portraits/women/44.jpg',
+  useEffect(() => {
+    const t = setTimeout(
+      () => setDebouncedSearch(searchInput.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const listQuery = usePublicDoctorsInfinite(debouncedSearch);
+
+  const rows = useMemo(
+    () =>
+      listQuery.data?.pages.flatMap((p) => p.items ?? []) ??
+      ([] as PublicDoctorProfile[]),
+    [listQuery.data?.pages],
+  );
+
+  const listPagination = useMemo(() => {
+    const pages = listQuery.data?.pages;
+    if (!pages?.length) return null;
+    return pages[pages.length - 1]?.pagination ?? null;
+  }, [listQuery.data?.pages]);
+
+  const onRefresh = useCallback(() => {
+    listQuery.refetch();
+  }, [listQuery]);
+
+  const loadMore = useCallback(() => {
+    if (listQuery.hasNextPage && !listQuery.isFetchingNextPage) {
+      listQuery.fetchNextPage();
+    }
+  }, [listQuery]);
+
+  const openDoctorProfile = useCallback(
+    (doctorId: string) => {
+      (
+        navigation as unknown as {
+          navigate: (name: string, params: object) => void;
+        }
+      ).navigate('MainTabs', {
+        screen: 'Home',
+        params: {
+          screen: 'HomeDoctorDetails',
+          params: { doctorId },
+        },
+      });
     },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      specialty: 'Dermatologist',
-      rating: '4.9',
-      years: '8 years',
-      patients: '980 patients',
-      fee: '$45',
-      imageUri: 'https://randomuser.me/api/portraits/men/32.jpg',
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Carter',
-      specialty: 'Neurologist',
-      rating: '4.7',
-      years: '9 years',
-      patients: '870 patients',
-      fee: '$55',
-      imageUri: 'https://randomuser.me/api/portraits/women/68.jpg',
-    },
-    {
-      id: 4,
-      name: 'Dr. James Lee',
-      specialty: 'Gastroenterologist',
-      rating: '4.6',
-      years: '10 years',
-      patients: '1.0k patients',
-      fee: '$48',
-      imageUri: 'https://randomuser.me/api/portraits/men/75.jpg',
-    },
-  ];
+    [navigation],
+  );
 
   const handleBackPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleCardPress = (doctor: DoctorData) => {
-    navigation.navigate('DoctorDetails', { selectedDoctor: doctor });
+  const renderItem = useCallback(
+    ({ item }: { item: PublicDoctorProfile }) => {
+      const doctorId = item.user?.id;
+      if (!doctorId) return null;
+      return (
+        <TopDoctorCard
+          profile={item}
+          onPress={() => openDoctorProfile(doctorId)}
+        />
+      );
+    },
+    [openDoctorProfile],
+  );
+
+  const emptyComponent = () => {
+    if (listQuery.isPending) {
+      return (
+        <View style={styles.skeletonStack}>
+          {Array.from({ length: LIST_SKELETON_COUNT }).map((_, i) => (
+            <TopDoctorCardSkeleton key={`doc-drawer-sk-${i}`} />
+          ))}
+        </View>
+      );
+    }
+    if (listQuery.isError) {
+      return (
+        <Text style={styles.emptyText}>
+          {(listQuery.error as Error)?.message ?? 'Could not load doctors.'}
+        </Text>
+      );
+    }
+    return (
+      <Text style={styles.emptyText}>No doctors match your search.</Text>
+    );
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <View style={styles.container}>
       <View style={styles.headerBlock}>
         <View style={[styles.headerRow, { paddingTop: insets.top + 6 }]}>
           <TouchableOpacity
@@ -101,63 +141,69 @@ const Doctors: React.FC = () => {
           <View style={styles.headerRight} />
         </View>
       </View>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          <View style={styles.titleSection}>
-            <Text style={styles.heading}>Book Appointment</Text>
-            <Text style={styles.description}>
-              Select a doctor to book your appointment.
-            </Text>
-          </View>
 
-          {doctors.map((doctor) => (
-            <TouchableOpacity
-              key={doctor.id}
-              style={styles.card}
-              onPress={() => handleCardPress(doctor)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.topRow}>
-                <Image source={{ uri: doctor.imageUri }} style={styles.avatar} />
-                <View style={styles.topInfo}>
-                  <Text style={styles.doctorName}>{doctor.name}</Text>
-                  <Text style={styles.specialtyText}>{doctor.specialty}</Text>
-                  <View style={styles.metaRow}>
-                    <View style={styles.metaItem}>
-                      <Icons.StarIcon width={14} height={14} />
-                      <Text style={styles.metaText}>{doctor.rating}</Text>
-                    </View>
-                    <Text style={styles.metaText}>{doctor.years}</Text>
-                    <Text style={styles.metaText}>{doctor.patients}</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.bottomRow}>
-                <View>
-                  <Text style={styles.feeLabel}>Consultation Fee</Text>
-                  <Text style={styles.feeValue}>{doctor.fee}</Text>
-                </View>
-                <View style={styles.availablePill}>
-                  <Text style={styles.availableText}>Available</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      <FlatList
+        style={styles.list}
+        data={rows}
+        keyExtractor={(item, index) => item.user?.id ?? `row-${index}`}
+        renderItem={renderItem}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(insets.bottom, 16) + 32 },
+        ]}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        ListHeaderComponent={
+          <View style={styles.titleSection}>
+            <Text style={styles.pageHeading}>Book Appointment</Text>
+            <Text style={styles.pageDescription}>
+              Search by doctor name or email. Select a doctor to view profile
+              and book.
+            </Text>
+            <View style={styles.searchField}>
+              <Icons.Search width={18} height={18} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search doctors…"
+                placeholderTextColor="#9CA3AF"
+                value={searchInput}
+                onChangeText={setSearchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+            </View>
+          </View>
+        }
+        ListEmptyComponent={emptyComponent}
+        ListFooterComponent={
+          <ListPaginationFooter
+            loadedCount={rows.length}
+            pagination={listPagination}
+            hasNextPage={listQuery.hasNextPage}
+            isFetchingNextPage={listQuery.isFetchingNextPage}
+            onLoadMore={loadMore}
+            itemLabel="doctors"
+          />
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={listQuery.isRefetching && !listQuery.isPending}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+          />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.35}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  list: { flex: 1 },
   headerBlock: {
     backgroundColor: '#ECF2FD',
     paddingHorizontal: 16,
@@ -180,7 +226,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.raleway,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#1F2937',
   },
@@ -188,118 +234,54 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 100,
-  },
-  content: {
-    paddingHorizontal: 15,
-  },
   titleSection: {
-    marginTop: 22,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  heading: {
+  pageHeading: {
     fontFamily: Fonts.raleway,
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#1F2937',
+    marginBottom: 6,
   },
-  description: {
+  pageDescription: {
     fontFamily: Fonts.openSans,
     fontSize: 13,
     fontWeight: '400',
     color: '#64748B',
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    padding: 14,
     marginBottom: 12,
   },
-  topRow: {
+  searchField: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    marginRight: 14,
-  },
-  topInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 12,
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  specialtyText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  doctorName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 3,
-  },
-  feeLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#6B7280',
-  },
-  feeValue: {
-    fontFamily: Fonts.raleway,
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginTop: 2,
-  },
-  availablePill: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 999,
+    gap: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  availableText: {
-    fontFamily: Fonts.raleway,
+  searchInput: {
+    flex: 1,
+    fontFamily: Fonts.openSans,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    padding: 0,
+  },
+  listContent: { padding: 15 },
+  skeletonStack: {
+    gap: 12,
+    paddingBottom: 8,
+  },
+  emptyText: {
+    fontFamily: Fonts.openSans,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#10B981',
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
   },
 });
 
 export default Doctors;
-

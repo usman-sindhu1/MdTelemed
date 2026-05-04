@@ -7,22 +7,23 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerActions } from '@react-navigation/native';
 import HomeHeader from '../../components/common/HomeHeader';
-import IAmLookingFor from '../../components/homecomponents/IAmLookingFor';
 import UpcommingAppointments from '../../components/homecomponents/UpcommingAppointments';
 import TopDoctors from '../../components/homecomponents/TopDoctors';
 import Icons from '../../assets/svg';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { useScrollContext } from '../../contexts/ScrollContext';
+import { invalidatePatientAppointmentCaches } from '../../hooks/useHomeUpcomingAppointments';
 
 const Home: React.FC = () => {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { setIsScrollingDown } = useScrollContext();
-  const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -66,15 +67,7 @@ const Home: React.FC = () => {
   };
 
   const handleSetupForLater = () => {
-    (navigation.getParent() as any)?.getParent()?.navigate('BookAppt', {
-      preselectedCategoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
-    });
-  };
-
-  const handleCategoriesSeeAll = () => {
-    (navigation.getParent() as any)?.getParent()?.navigate('BookAppt', {
-      preselectedCategoryId: selectedCategoryId !== 'all' ? selectedCategoryId : undefined,
-    });
+    (navigation.getParent() as any)?.getParent()?.navigate('BookAppt');
   };
 
   const handleScrollStart = () => {
@@ -87,6 +80,8 @@ const Home: React.FC = () => {
 
   const handleRefresh = () => {
     setRefreshing(true);
+    invalidatePatientAppointmentCaches(queryClient);
+    void queryClient.invalidateQueries({ queryKey: ['public-doctors'] });
     setTimeout(() => {
       setRefreshing(false);
     }, 900);
@@ -126,7 +121,7 @@ const Home: React.FC = () => {
         <View style={styles.content}>
           <Text style={styles.sectionTitle}>Connect with top doctors instantly.</Text>
 
-          {/* Two cards: Quick Consultation & Setup For Later */}
+          {/* Two cards: See Doctor Now & Book Later */}
           <View style={styles.twoCardRow}>
             <View style={styles.quickConsultCardWrapper}>
               <TouchableOpacity
@@ -135,10 +130,20 @@ const Home: React.FC = () => {
                 activeOpacity={0.9}
               >
                 <View style={styles.quickConsultIconWrap}>
-                  <Icons.CalendarTodayIcon width={20} height={20} />
+                  <Icons.SeeDoctorNowIcon
+                    width={24}
+                    height={24}
+                    fill="#1F2937"
+                    color="#1F2937"
+                  />
                 </View>
-                <Text style={styles.quickConsultTitle}>Quick</Text>
-                <Text style={[styles.quickConsultTitle, styles.cardTitleSecondLine]}>Consultation</Text>
+                <Text
+                  style={styles.quickConsultTitle}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  See Doctor Now
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -149,23 +154,26 @@ const Home: React.FC = () => {
                 activeOpacity={0.9}
               >
                 <View style={styles.setupLaterIconWrap}>
-                  <Icons.CalendarClockIcon width={20} height={20} />
+                  <Icons.CalendarClockIcon
+                    width={24}
+                    height={24}
+                    fill="#1F2937"
+                  />
                 </View>
-                <Text style={styles.setupLaterTitle}>Setup For</Text>
-                <Text style={[styles.setupLaterTitle, styles.cardTitleSecondLine]}>Later</Text>
+                <Text
+                  style={styles.setupLaterTitle}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  Book Later
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <UpcommingAppointments />
 
-          <IAmLookingFor
-            selectedCategoryId={selectedCategoryId}
-            onCategoryChange={setSelectedCategoryId}
-            onSeeAllPress={handleCategoriesSeeAll}
-          />
-
-          <TopDoctors selectedCategoryId={selectedCategoryId} />
+          <TopDoctors />
         </View>
       </ScrollView>
       </SafeAreaView>
@@ -211,7 +219,7 @@ const styles = StyleSheet.create({
   },
   quickConsultCardWrapper: {
     flex: 1,
-    minHeight: 120,
+    height: 108,
     borderRadius: 18,
     // box-shadow: 0px 8px 10px -6px #2B7FFF40
     shadowColor: '#2B7FFF',
@@ -224,8 +232,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#2563EB',
     borderRadius: 18,
-    padding: 16,
-    minHeight: 120,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    height: 108,
     justifyContent: 'space-between',
     // box-shadow: 0px 20px 25px -5px #2B7FFF40
     shadowColor: '#2B7FFF',
@@ -242,7 +251,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   quickConsultTitle: {
     fontFamily: Fonts.raleway,
@@ -250,13 +259,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     lineHeight: 20,
-  },
-  cardTitleSecondLine: {
-    marginTop: -12,
+    alignSelf: 'stretch',
   },
   setupLaterCardWrapper: {
     flex: 1,
-    minHeight: 120,
+    height: 108,
     borderRadius: 18,
     // box-shadow: 0px 4px 6px -4px #0000000D
     shadowColor: '#000000',
@@ -269,8 +276,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 16,
-    minHeight: 120,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    height: 108,
     justifyContent: 'space-between',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -289,7 +297,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   setupLaterTitle: {
     fontFamily: Fonts.raleway,
@@ -297,6 +305,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
     lineHeight: 20,
+    alignSelf: 'stretch',
   },
 });
 

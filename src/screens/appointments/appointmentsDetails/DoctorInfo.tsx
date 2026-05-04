@@ -1,416 +1,183 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
+import type { PatientAppointmentDetailPayload } from '../../../types/patientAppointments';
+import { extractSpecialty } from '../../../utils/appointmentEnrichment';
 
-type SubTabType = 'Other Details' | 'Available Hours' | 'Reviews';
+export interface DoctorInfoProps {
+  detail: PatientAppointmentDetailPayload | undefined;
+  therapistData: unknown;
+  therapistLoading: boolean;
+  isLoading: boolean;
+}
 
-const DoctorInfo: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<SubTabType>('Other Details');
+function doctorDisplayName(
+  doctor: PatientAppointmentDetailPayload['doctor'],
+): string {
+  if (!doctor) return 'Doctor';
+  const fn = doctor.firstName?.trim() ?? '';
+  const ln = doctor.lastName?.trim() ?? '';
+  const full = [fn, ln].filter(Boolean).join(' ');
+  return full || 'Doctor';
+}
 
-  const subTabs: SubTabType[] = ['Other Details', 'Available Hours', 'Reviews'];
+const DoctorInfo: React.FC<DoctorInfoProps> = ({
+  detail,
+  therapistData,
+  therapistLoading,
+  isLoading,
+}) => {
+  const doctor = detail?.doctor;
+  const name = doctorDisplayName(doctor);
+  const specialty =
+    therapistLoading && !therapistData
+      ? '…'
+      : extractSpecialty(therapistData);
+  const email =
+    doctor?.email && doctor.email.trim() ? doctor.email.trim() : '—';
+  const doctorId =
+    doctor?.id && doctor.id.trim() ? doctor.id.trim() : '—';
+  const uri = doctor?.image?.trim() ? doctor.image.trim() : undefined;
 
-  const doctorData = {
-    name: 'Dr. Ayesha Noor',
-    specialty: 'Allergist',
-    about: 'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna.',
-    profession: 'Allergist Specialist',
-    ageGroup: '8-16 years',
-    language: 'English, Spanish',
-    fundingOptions: 'Cash & Card',
-    serviceDelivery: 'Immidiate',
-  };
-
-  const availableHours = [
-    { day: 'Monday', hours: '9:00 AM - 5:00 PM', status: 'Available' },
-    { day: 'Tuesday', hours: '9:00 AM - 5:00 PM', status: 'Available' },
-    { day: 'Wednesday', hours: '9:00 AM - 5:00 PM', status: 'Available' },
-    { day: 'Thursday', hours: '9:00 AM - 5:00 PM', status: 'Available' },
-    { day: 'Friday', hours: '9:00 AM - 2:00 PM', status: 'Available' },
-    { day: 'Saturday', hours: '10:00 AM - 1:00 PM', status: 'Available' },
-    { day: 'Sunday', hours: 'Closed', status: 'Unavailable' },
-  ];
-
-  const reviews = [
-    {
-      id: '1',
-      patientName: 'John Doe',
-      rating: 5,
-      date: 'Jan 15, 2025',
-      comment: 'Excellent doctor! Very professional and caring. Highly recommended.',
-    },
-    {
-      id: '2',
-      patientName: 'Jane Smith',
-      rating: 4,
-      date: 'Jan 10, 2025',
-      comment: 'Great experience. The doctor was very thorough and explained everything clearly.',
-    },
-    {
-      id: '3',
-      patientName: 'Mike Johnson',
-      rating: 5,
-      date: 'Jan 5, 2025',
-      comment: 'Best allergist I have ever visited. Very knowledgeable and patient.',
-    },
-  ];
-
-  const InfoRow = ({ label, value }: { label: string; value: string }) => (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-
-  const renderSubTabContent = () => {
-    if (activeSubTab === 'Other Details') {
-      return (
-        <View style={styles.subTabContent}>
-          <InfoRow label="Profession:" value={doctorData.profession} />
-          <InfoRow label="Age group:" value={doctorData.ageGroup} />
-          <InfoRow label="Language:" value={doctorData.language} />
-          <InfoRow label="Funding options:" value={doctorData.fundingOptions} />
-          <InfoRow label="Service delivery:" value={doctorData.serviceDelivery} />
-        </View>
-      );
-    }
-
-    if (activeSubTab === 'Available Hours') {
-      return (
-        <View style={styles.subTabContent}>
-          {availableHours.map((schedule, index) => (
-            <View key={index} style={styles.hoursRow}>
-              <View style={styles.hoursLeft}>
-                <Text style={styles.dayText}>{schedule.day}</Text>
-                <Text style={styles.hoursText}>{schedule.hours}</Text>
-              </View>
-              <View style={[
-                styles.statusBadge,
-                schedule.status === 'Available' ? styles.statusAvailable : styles.statusUnavailable
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  schedule.status === 'Available' ? styles.statusTextAvailable : styles.statusTextUnavailable
-                ]}>
-                  {schedule.status}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      );
-    }
-
-    if (activeSubTab === 'Reviews') {
-      return (
-        <View style={styles.subTabContent}>
-          {reviews.map((review) => (
-            <View key={review.id} style={styles.reviewCard}>
-              <View style={styles.reviewHeader}>
-                <View style={styles.reviewHeaderLeft}>
-                  <Text style={styles.reviewPatientName}>{review.patientName}</Text>
-                  <View style={styles.ratingContainer}>
-                    {[...Array(5)].map((_, i) => (
-                      <Text key={i} style={styles.star}>
-                        {i < review.rating ? '★' : '☆'}
-                      </Text>
-                    ))}
-                  </View>
-                </View>
-                <Text style={styles.reviewDate}>{review.date}</Text>
-              </View>
-              <Text style={styles.reviewComment}>{review.comment}</Text>
-            </View>
-          ))}
-        </View>
-      );
-    }
-
-    return null;
-  };
+  if (isLoading && !detail) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* Doctor Header */}
-      <View style={styles.doctorHeader}>
-        <View style={styles.outerBorderContainer}>
-          <View style={styles.borderContainer}>
-            <View style={styles.imageContainer}>
-              <View style={styles.placeholderImage} />
-            </View>
+    <View style={styles.card}>
+      <View style={styles.profileRow}>
+        <View style={styles.avatarWrap}>
+          {uri ? (
+            <Image source={{ uri }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder} />
+          )}
+        </View>
+        <View style={styles.profileText}>
+          <Text style={styles.name}>{name}</Text>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{specialty}</Text>
           </View>
+          <Text style={styles.desc}>
+            Doctor information for this appointment.
+          </Text>
         </View>
-        <View style={styles.doctorInfo}>
-          <Text style={styles.specialty}>{doctorData.specialty}</Text>
-          <Text style={styles.doctorName}>{doctorData.name}</Text>
+      </View>
+      <View style={styles.details}>
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <Text style={styles.value}>{email}</Text>
+        </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Doctor ID</Text>
+          <Text style={styles.value} selectable>
+            {doctorId}
+          </Text>
         </View>
       </View>
-
-      {/* About Section */}
-      <View style={styles.aboutSection}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.aboutText}>{doctorData.about}</Text>
-      </View>
-
-      {/* Sub Tabs */}
-      <View style={styles.subTabsContainer}>
-        {subTabs.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[
-              styles.subTab,
-              activeSubTab === tab && styles.subTabActive,
-            ]}
-            onPress={() => setActiveSubTab(tab)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.subTabText,
-                activeSubTab === tab && styles.subTabTextActive,
-              ]}
-            >
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Sub Tab Content */}
-      {renderSubTabContent()}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 20,
-  },
-  doctorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  outerBorderContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
+  loading: {
+    paddingVertical: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
   },
-  borderContainer: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    padding: 16,
+    gap: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  avatarWrap: {
+    borderRadius: 12,
     overflow: 'hidden',
   },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 37,
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 12,
     backgroundColor: Colors.backgroundLight,
-    overflow: 'hidden',
   },
-  placeholderImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 37,
+  avatarPlaceholder: {
+    width: 88,
+    height: 88,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
   },
-  doctorInfo: {
+  profileText: {
     flex: 1,
+    minWidth: 0,
   },
-  specialty: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textLight,
-    marginBottom: 4,
-  },
-  doctorName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  aboutSection: {
-    gap: 12,
-  },
-  sectionTitle: {
+  name: {
     fontFamily: Fonts.raleway,
     fontSize: 20,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
-  aboutText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  subTabsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  subTab: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: Colors.backgroundLight,
-  },
-  subTabActive: {
+  badge: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
     backgroundColor: Colors.primary,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
   },
-  subTabText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
+  badgeText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  subTabTextActive: {
     color: '#FFFFFF',
   },
-  subTabContent: {
-    marginTop: 16,
-    gap: 16,
+  desc: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: Colors.textLight,
+    marginTop: 8,
+    lineHeight: 18,
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+  details: {
+    gap: 16,
+    paddingTop: 4,
+  },
+  field: {
     gap: 4,
   },
-  infoLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textLight,
-  },
-  infoValue: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textPrimary,
-    marginLeft: 4,
-  },
-  placeholderText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    color: Colors.textLight,
-    textAlign: 'center',
-    paddingVertical: 40,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  hoursLeft: {
-    flex: 1,
-  },
-  dayText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  hoursText: {
+  label: {
     fontFamily: Fonts.openSans,
     fontSize: 12,
-    fontWeight: '400',
     color: Colors.textLight,
   },
-  statusBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  statusAvailable: {
-    backgroundColor: '#E8F5E9',
-  },
-  statusUnavailable: {
-    backgroundColor: '#FFEBEE',
-  },
-  statusText: {
+  value: {
     fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statusTextAvailable: {
-    color: '#4CAF50',
-  },
-  statusTextUnavailable: {
-    color: '#F44336',
-  },
-  reviewCard: {
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  reviewHeaderLeft: {
-    flex: 1,
-  },
-  reviewPatientName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
     color: Colors.textPrimary,
-    marginBottom: 6,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  star: {
-    fontSize: 16,
-    color: '#FFD700',
-  },
-  reviewDate: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textLight,
-  },
-  reviewComment: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-    lineHeight: 20,
   },
 });
 
 export default DoctorInfo;
-

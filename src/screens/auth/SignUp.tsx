@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   Linking,
   Animated,
 } from 'react-native';
+import { showErrorToast } from '../../utils/appToast';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,6 +23,8 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { signUpSchema, validateWithSchema, validateField } from '../../utils/validation';
 import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import { getDeviceTimeZone } from '../../utils/authSession';
 
 const SURFACE_BASE = '#FFFFFF';
 const PRIMARY = '#2563EB';
@@ -38,17 +40,14 @@ const SOCIAL_BUTTON_TEXT_COLOR = '#757575';
 
 type SignUpScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'SignUp'>;
 
-type SignUpData = {
-  first_name: string;
-  last_name: string;
+type SignupRequestBody = {
+  firstName: string;
+  lastName: string;
   email: string;
-  password: string;
-  date_of_birth: string;
-  address: string;
-  gender: string;
   phone: string;
-  country: string;
-  city: string;
+  password: string;
+  role?: string;
+  timezone?: string;
 };
 
 const SignUp: React.FC = () => {
@@ -64,19 +63,11 @@ const SignUp: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const { onRequest, isPending } = useApi<SignUpData>({
+  const { onRequest, isPending } = useApi<SignupRequestBody>({
     method: 'post',
     key: 'patient-signup',
     isSuccessToast: false,
   });
-
-  // Single "Your Name" value for the combined input
-  const fullName = [firstName, lastName].filter(Boolean).join(' ');
-  const setFullName = (text: string) => {
-    const parts = text.trim().split(/\s+/);
-    setFirstName(parts[0] || '');
-    setLastName(parts.slice(1).join(' ') || '');
-  };
 
   const handleFieldChange = async (
     field: string,
@@ -183,28 +174,24 @@ const SignUp: React.FC = () => {
 
     setErrors({});
 
-    const apiData = {
-      first_name: firstName,
-      last_name: lastName,
-      email,
+    const apiData: SignupRequestBody = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
       password,
-      date_of_birth: '',
-      address: '',
-      gender: '',
-      phone,
-      country: '',
-      city: '',
+      role: 'PATIENT',
+      timezone: getDeviceTimeZone(),
     };
 
-    onRequest<SignUpData>({
-      path: '/otp/patient/signup',
-      data: apiData as SignUpData,
+    onRequest({
+      path: authPaths.signup,
+      data: apiData,
       onSuccess: () => {
-        navigation.navigate('VerifyEmail');
+        navigation.navigate('VerifyEmail', { email: email.trim() });
       },
       onError: (error: any) => {
-        const errorMessage = error?.message || 'Failed to create account. Please try again.';
-        Alert.alert('Sign Up Failed', errorMessage, [{ text: 'OK' }]);
+        showErrorToast(error?.message || 'Failed to create account. Please try again.');
       },
     });
   };
@@ -316,22 +303,28 @@ const SignUp: React.FC = () => {
             {/* Inputs */}
             <View style={styles.inputSection}>
               <Input
-                label="Your Name"
+                label="First Name"
                 placeholder="Write here"
                 placeholderTextColor={PLACEHOLDER_COLOR}
                 labelStyle={styles.inputLabel}
-                value={fullName}
-                onChangeText={(text) => {
-                  setFullName(text);
-                  if (errors.firstName) {
-                    const next = { ...errors };
-                    delete next.firstName;
-                    setErrors(next);
-                  }
-                }}
+                value={firstName}
+                onChangeText={(text) => handleFieldChange('firstName', text)}
                 onBlur={() => handleFieldBlur('firstName')}
                 style={styles.input}
                 error={errors.firstName}
+                autoCapitalize="words"
+              />
+              <Input
+                label="Last Name"
+                placeholder="Write here"
+                placeholderTextColor={PLACEHOLDER_COLOR}
+                labelStyle={styles.inputLabel}
+                value={lastName}
+                onChangeText={(text) => handleFieldChange('lastName', text)}
+                onBlur={() => handleFieldBlur('lastName')}
+                style={styles.input}
+                error={errors.lastName}
+                autoCapitalize="words"
               />
               <Input
                 label="Email"

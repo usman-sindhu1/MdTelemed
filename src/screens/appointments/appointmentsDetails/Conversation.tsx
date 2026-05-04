@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,86 +6,97 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
 import Icons from '../../../assets/svg';
+import type { ChatBubbleUi } from '../../../utils/chatMessageUi';
 
-interface Message {
-  id: string;
-  text: string;
-  time: string;
-  isSent: boolean;
-  date?: string;
+export interface ConversationProps {
+  doctorDisplayName: string;
+  isOnline?: boolean;
+  messages: ChatBubbleUi[];
+  messagesLoading?: boolean;
+  onSend: (text: string) => void;
+  sendPending?: boolean;
+  composerDisabled?: boolean;
+  composerHint?: string;
+  bottomInset?: number;
 }
 
-const Conversation: React.FC = () => {
+const Conversation: React.FC<ConversationProps> = ({
+  doctorDisplayName,
+  isOnline = false,
+  messages,
+  messagesLoading,
+  onSend,
+  sendPending,
+  composerDisabled,
+  composerHint,
+  bottomInset = 0,
+}) => {
   const [message, setMessage] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
 
-  const messages: Message[] = [
-    {
-      id: '1',
-      text: 'Hello, how are you today?',
-      time: '08:39 pm',
-      date: 'Sep 12',
-      isSent: false,
-    },
-    {
-      id: '2',
-      text: 'Hello, how are you today?',
-      time: '08:39 pm',
-      isSent: true,
-    },
-    {
-      id: '3',
-      text: 'Hello, how are you today?',
-      time: '08:39 pm',
-      date: 'Sep 10',
-      isSent: false,
-    },
-    {
-      id: '4',
-      text: 'Hello, how are you today?',
-      time: '08:39 pm',
-      isSent: false,
-    },
-    {
-      id: '5',
-      text: 'Hello, how are you today?',
-      time: '08:39 pm',
-      isSent: true,
-    },
-  ];
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [messages.length]);
 
   const handleSend = () => {
-    if (message.trim()) {
-      console.log('Send message:', message);
-      setMessage('');
-    }
+    const t = message.trim();
+    if (!t || composerDisabled || sendPending) return;
+    onSend(t);
+    setMessage('');
   };
 
-  let currentDate = '';
+  const inputBlocked = composerDisabled || Boolean(composerHint);
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {messages.map((msg) => {
-          const showDate = msg.date && msg.date !== currentDate;
-          if (showDate) {
-            currentDate = msg.date || '';
-          }
-          return (
-            <View key={msg.id}>
-              {showDate && (
-                <View style={styles.dateSeparator}>
-                  <Text style={styles.dateText}>{msg.date}</Text>
-                </View>
-              )}
+  const rootStyle = [styles.root, { marginBottom: bottomInset }];
+
+  const chatCard = (
+    <View style={styles.chatCard}>
+        <View style={styles.chatHeader}>
+          <View
+            style={[
+              styles.statusDot,
+              isOnline ? styles.statusDotOn : styles.statusDotOff,
+            ]}
+          />
+          <Text style={styles.headerName}>{doctorDisplayName}</Text>
+          <Text style={styles.headerStatus}>
+            {isOnline ? 'Online' : 'Offline'}
+          </Text>
+        </View>
+
+        <ScrollView
+          ref={scrollRef}
+          style={styles.messagesScroll}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {messagesLoading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={Colors.primary} />
+            </View>
+          ) : messages.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <View style={styles.iconCircle}>
+                <Icons.Chat1Icon width={40} height={40} />
+              </View>
+              <Text style={styles.emptyTitle}>No messages yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Start the conversation by sending your first message.
+              </Text>
+            </View>
+          ) : (
+            messages.map((msg) => (
               <View
+                key={msg.id}
                 style={[
                   styles.messageContainer,
                   msg.isSent ? styles.sentMessage : styles.receivedMessage,
@@ -115,60 +126,159 @@ const Conversation: React.FC = () => {
                   </Text>
                 </View>
               </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+            ))
+          )}
+        </ScrollView>
 
-      {/* Input Bar */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.attachButton} activeOpacity={0.7}>
-          <Icons.Vector5Icon width={20} height={20} />
-        </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          placeholder="Write your message"
-          placeholderTextColor={Colors.textLight}
-          value={message}
-          onChangeText={setMessage}
-          multiline
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={handleSend}
-          activeOpacity={0.7}
-        >
-          <Icons.SentMessageIcon width={20} height={20} />
-        </TouchableOpacity>
+        {composerHint ? (
+          <Text style={styles.hint}>{composerHint}</Text>
+        ) : null}
+
+        <View style={[styles.inputContainer, inputBlocked && styles.inputDisabled]}>
+          <TouchableOpacity
+            style={styles.attachButton}
+            activeOpacity={0.7}
+            disabled={inputBlocked}
+            onPress={() => {}}
+          >
+            <Icons.Vector5Icon width={20} height={20} />
+          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Type your message..."
+            placeholderTextColor={Colors.textLight}
+            value={message}
+            onChangeText={setMessage}
+            multiline
+            editable={!inputBlocked}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              (sendPending || inputBlocked) && styles.sendButtonDisabled,
+            ]}
+            onPress={handleSend}
+            activeOpacity={0.7}
+            disabled={inputBlocked || sendPending}
+          >
+            {sendPending ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Icons.SentMessageIcon width={20} height={20} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+  );
+
+  /* Android: rely on android:windowSoftInputMode="adjustResize" — avoid KAV (conflicts with resize). */
+  if (Platform.OS === 'android') {
+    return <View style={rootStyle}>{chatCard}</View>;
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={rootStyle}
+      behavior="padding"
+      keyboardVerticalOffset={64}
+    >
+      {chatCard}
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
+    flex: 1,
+    minHeight: 240,
+  },
+  chatCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    minHeight: 280,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusDotOff: {
+    backgroundColor: '#9CA3AF',
+  },
+  statusDotOn: {
+    backgroundColor: '#22C55E',
+  },
+  headerName: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
     flex: 1,
   },
-  messagesContainer: {
+  headerStatus: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: Colors.textLight,
+  },
+  messagesScroll: {
     flex: 1,
   },
   messagesContent: {
+    flexGrow: 1,
     paddingVertical: 16,
-    gap: 12,
+    paddingHorizontal: 12,
   },
-  dateSeparator: {
+  loadingWrap: {
+    paddingVertical: 32,
     alignItems: 'center',
-    marginVertical: 16,
   },
-  dateText: {
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    minHeight: 160,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
     fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
+    fontSize: 14,
     color: Colors.textLight,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
   messageContainer: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   sentMessage: {
     justifyContent: 'flex-end',
@@ -177,9 +287,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageBubble: {
-    maxWidth: '75%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    maxWidth: '78%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 16,
     gap: 4,
   },
@@ -211,19 +321,32 @@ const styles = StyleSheet.create({
   },
   sentTime: {
     color: '#FFFFFF',
-    opacity: 0.8,
+    opacity: 0.85,
   },
   receivedTime: {
     color: Colors.textLight,
+  },
+  hint: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    color: Colors.textLight,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FEF3C7',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: 12,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
+    backgroundColor: '#FAFAFA',
+  },
+  inputDisabled: {
+    opacity: 0.65,
   },
   attachButton: {
     width: 40,
@@ -237,23 +360,27 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontFamily: Fonts.openSans,
     fontSize: 14,
     color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  sendButtonDisabled: {
+    opacity: 0.55,
+  },
 });
 
 export default Conversation;
-

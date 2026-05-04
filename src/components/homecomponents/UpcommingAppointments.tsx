@@ -11,71 +11,21 @@ import { useNavigation } from '@react-navigation/native';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
+import ShimmerBox from '../common/ShimmerBox';
+import { useHomeUpcomingAppointments } from '../../hooks/useHomeUpcomingAppointments';
 
-interface Appointment {
-  id: string;
-  doctorName: string;
-  doctorImageUri?: string;
-  specialty: string;
-  date: string;
-  time: string;
-  status: 'Upcoming' | 'Attended' | 'Cancelled' | 'Draft';
-}
+const SKELETON_CARDS = 2;
 
 const UpcommingAppointments: React.FC = () => {
   const navigation = useNavigation<any>();
-
-  const appointments: Appointment[] = [
-    {
-      id: '5646543',
-      doctorName: 'Dr. Sarah Johnson',
-      doctorImageUri: 'https://randomuser.me/api/portraits/women/44.jpg',
-      specialty: 'Cardiologist',
-      date: 'Mar 31, 2026',
-      time: '10:00 AM',
-      status: 'Upcoming',
-    },
-    {
-      id: '5646544',
-      doctorName: 'Dr. Emily Carter',
-      doctorImageUri: 'https://randomuser.me/api/portraits/women/68.jpg',
-      specialty: 'Neurologist',
-      date: 'Apr 02, 2026',
-      time: '9:45 AM',
-      status: 'Upcoming',
-    },
-    {
-      id: '5646545',
-      doctorName: 'Dr. Michael Chen',
-      doctorImageUri: 'https://randomuser.me/api/portraits/men/32.jpg',
-      specialty: 'Dermatologist',
-      date: 'Apr 05, 2026',
-      time: '2:30 PM',
-      status: 'Upcoming',
-    },
-    {
-      id: '5646546',
-      doctorName: 'Dr. James Lee',
-      doctorImageUri: 'https://randomuser.me/api/portraits/men/75.jpg',
-      specialty: 'Gastroenterologist',
-      date: 'Mar 20, 2026',
-      time: '4:15 PM',
-      status: 'Cancelled',
-    },
-  ];
-
-  const upcomingAppointments = appointments
-    .filter((appointment) => appointment.status === 'Upcoming')
-    .slice(0, 3);
+  const { cards, isLoading, isEmpty, isError } = useHomeUpcomingAppointments();
 
   const handleViewAll = () => {
-    // Navigate to Appointments screen in the Calendar (Appointments) stack
     navigation.navigate('Calendar', { screen: 'AppointmentsMain' });
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Upcoming Appointment</Text>
         <TouchableOpacity onPress={handleViewAll} activeOpacity={0.7}>
@@ -83,54 +33,107 @@ const UpcommingAppointments: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Appointment Cards */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.cardsContainer}
-      >
-        {upcomingAppointments.map((appointment) => (
-          <View key={appointment.id} style={styles.card}>
-            <View style={styles.topRow}>
-              <View style={styles.imageShell}>
-                {appointment.doctorImageUri ? (
-                  <Image source={{ uri: appointment.doctorImageUri }} style={styles.profileImage} />
-                ) : (
-                  <View style={styles.placeholderImage} />
-                )}
-              </View>
-              <View style={styles.doctorTextWrap}>
-                <Text style={styles.doctorName} numberOfLines={1}>
-                  {appointment.doctorName}
-                </Text>
-                <Text style={styles.specialty} numberOfLines={1}>
-                  {appointment.specialty}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.bottomRow}>
-              <View style={styles.datetimeWrap}>
-                <View style={styles.detailItem}>
-                  <Icons.CalendarTodayIcon width={20} height={20} />
-                  <Text style={styles.detailText} numberOfLines={1}>
-                    {appointment.date}
-                  </Text>
-                </View>
-                <View style={styles.detailItem}>
-                  <Icons.NestClockFarsightAnalogIcon width={20} height={20} />
-                  <Text style={styles.detailText} numberOfLines={1}>
-                    {appointment.time}
-                  </Text>
+      {isLoading ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardsContainer}
+        >
+          {Array.from({ length: SKELETON_CARDS }).map((_, i) => (
+            <View key={`sk-${i}`} style={styles.card}>
+              <View style={styles.topRow}>
+                <ShimmerBox width={84} height={84} borderRadius={20} />
+                <View style={styles.shimmerTextCol}>
+                  <ShimmerBox height={18} borderRadius={8} />
+                  <ShimmerBox height={14} borderRadius={6} width="70%" />
                 </View>
               </View>
-              <View style={styles.statusPill}>
-                <Text style={styles.statusText}>upcoming</Text>
+              <View style={styles.bottomRow}>
+                <View style={styles.datetimeWrap}>
+                  <ShimmerBox width={72} height={14} borderRadius={6} />
+                  <ShimmerBox width={72} height={14} borderRadius={6} />
+                </View>
+                <ShimmerBox width={88} height={36} borderRadius={999} />
               </View>
             </View>
+          ))}
+        </ScrollView>
+      ) : isError ? (
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyIconWrap}>
+            <Icons.CalendarTodayIcon width={30} height={30} />
           </View>
-        ))}
-      </ScrollView>
+          <View style={styles.emptyTextCol}>
+            <Text style={styles.emptyTitle}>Could not load appointments</Text>
+            <Text style={styles.emptySubtitle}>
+              Pull to refresh on Home or try again in a moment.
+            </Text>
+          </View>
+        </View>
+      ) : isEmpty ? (
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyIconWrap}>
+            <Icons.CalendarClockIcon width={30} height={30} />
+          </View>
+          <View style={styles.emptyTextCol}>
+            <Text style={styles.emptyTitle}>No upcoming appointments yet</Text>
+            <Text style={styles.emptySubtitle}>
+              When you book a visit, it will show up here.
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardsContainer}
+        >
+          {cards.map((appointment) => (
+            <View key={appointment.id} style={styles.card}>
+              <View style={styles.topRow}>
+                <View style={styles.imageShell}>
+                  {appointment.doctorImageUri ? (
+                    <Image
+                      source={{ uri: appointment.doctorImageUri }}
+                      style={styles.profileImage}
+                    />
+                  ) : (
+                    <View style={styles.placeholderImage} />
+                  )}
+                </View>
+                <View style={styles.doctorTextWrap}>
+                  <Text style={styles.doctorName} numberOfLines={1}>
+                    {appointment.doctorName}
+                  </Text>
+                  <Text style={styles.specialty} numberOfLines={1}>
+                    {appointment.specialty}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.bottomRow}>
+                <View style={styles.datetimeWrap}>
+                  <View style={styles.detailItem}>
+                    <Icons.CalendarTodayIcon width={20} height={20} />
+                    <Text style={styles.detailText} numberOfLines={1}>
+                      {appointment.date}
+                    </Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Icons.NestClockFarsightAnalogIcon width={20} height={20} />
+                    <Text style={styles.detailText} numberOfLines={1}>
+                      {appointment.time}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.statusPill}>
+                  <Text style={styles.statusText}>{appointment.badgeLabel}</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -169,6 +172,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 16,
     minHeight: 156,
+  },
+  shimmerTextCol: {
+    flex: 1,
+    marginLeft: 14,
+    gap: 10,
+    justifyContent: 'center',
+    minWidth: 0,
   },
   topRow: {
     flexDirection: 'row',
@@ -251,7 +261,45 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     flexShrink: 1,
   },
+  emptyCard: {
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#6B7280',
+    lineHeight: 20,
+  },
 });
 
 export default UpcommingAppointments;
-

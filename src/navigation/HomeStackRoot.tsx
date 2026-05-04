@@ -8,16 +8,13 @@ import { ScrollProvider } from '../contexts/ScrollContext';
 import Invoices from '../screens/drawerScreens/Invoices';
 import InvoiceDetails from '../screens/drawerScreens/InvoicesDetails';
 import RatingsAndReviews from '../screens/drawerScreens/RatingsAndReviews';
-import ReviewDetails from '../screens/drawerScreens/ReviewDetails';
 import Settings from '../screens/drawerScreens/Settings';
 import ProfileDetails from '../screens/drawerScreens/ProfileSettings';
 import ChangePassword from '../screens/drawerScreens/ChangePassord';
 import Doctors from '../screens/drawerScreens/Doctors';
 import DoctorDetails from '../screens/drawerScreens/DoctorDetails';
-import Services from '../screens/drawerScreens/Services';
 import ContactUs from '../screens/drawerScreens/ContactUs';
 import MedicalInfo from '../screens/drawerScreens/MedicalInfo';
-import MedicalRecords from '../screens/drawerScreens/MedicalRecords';
 import NotificationSettings from '../screens/drawerScreens/NotificationSettings';
 import HelpAndFaqs from '../screens/drawerScreens/HelpAndFaqs';
 import TermsAndConditions from '../screens/drawerScreens/TermsAndConditions';
@@ -35,9 +32,8 @@ import ImmediateCarePriorityConfirm from '../screens/ImmediateCarePriorityConfir
 export type DrawerParamList = {
   MainTabs: undefined;
   Invoices: undefined;
-  InvoiceDetails: undefined;
+  InvoiceDetails: { paymentId: string };
   RatingsAndReviews: undefined;
-  ReviewDetails: undefined;
   ProfileSettings: undefined;
   ProfileDetails: undefined;
   ChangePassword: undefined;
@@ -56,10 +52,8 @@ export type DrawerParamList = {
         };
       }
     | undefined;
-  Services: undefined;
   ContactUs: undefined;
   MedicalInfo: undefined;
-  MedicalRecords: undefined;
   NotificationSettings: undefined;
   HelpAndFaqs: undefined;
   TermsAndConditions: undefined;
@@ -146,16 +140,13 @@ const HomeStackRoot = () => {
               <Drawer.Screen name="Invoices" component={Invoices} />
               <Drawer.Screen name="InvoiceDetails" component={InvoiceDetails} />
               <Drawer.Screen name="RatingsAndReviews" component={RatingsAndReviews} />
-              <Drawer.Screen name="ReviewDetails" component={ReviewDetails} />
               <Drawer.Screen name="ProfileSettings" component={Settings} />
               <Drawer.Screen name="ProfileDetails" component={ProfileDetails} />
               <Drawer.Screen name="ChangePassword" component={ChangePassword} />
               <Drawer.Screen name="Doctors" component={Doctors} />
               <Drawer.Screen name="DoctorDetails" component={DoctorDetails} />
-              <Drawer.Screen name="Services" component={Services} />
               <Drawer.Screen name="ContactUs" component={ContactUs} />
               <Drawer.Screen name="MedicalInfo" component={MedicalInfo} />
-              <Drawer.Screen name="MedicalRecords" component={MedicalRecords} />
               <Drawer.Screen name="NotificationSettings" component={NotificationSettings} />
               <Drawer.Screen name="HelpAndFaqs" component={HelpAndFaqs} />
               <Drawer.Screen name="TermsAndConditions" component={TermsAndConditions} />

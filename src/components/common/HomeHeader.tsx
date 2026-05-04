@@ -8,9 +8,17 @@ import {
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 import Icons from '../../assets/svg';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
+import { RootState } from '../../store';
+import { useLocationDisplay } from '../../hooks/useLocationDisplay';
+import {
+  getSavedAddress,
+  getUserAvatarUri,
+  getUserDisplayName,
+} from '../../utils/profileDisplay';
 
 const HEADER_BG = '#ECF2FD';
 const ICON_CIRCLE_SIZE = 44;
@@ -27,8 +35,11 @@ interface HomeHeaderProps {
   onFeelingPress?: (index: number) => void;
   placeholder?: string;
   value?: string;
+  /** Overrides session name from Redux (`auth.user`). */
   userName?: string;
+  /** Overrides resolved location (GPS → saved profile address). */
   userAddress?: string;
+  /** Overrides avatar URL from session; pass `null` to hide photo. */
   profileImageUri?: string | null;
   showFeelingRow?: boolean;
 }
@@ -43,12 +54,26 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   onFeelingPress,
   placeholder = 'Search doctor, service',
   value = '',
-  userName = 'John Doe',
-  userAddress = '1901 Thornridge Cir. Shiloh, Hawaii 81063',
-  profileImageUri,
+  userName: userNameOverride,
+  userAddress: userAddressOverride,
+  profileImageUri: profileImageOverride,
   showFeelingRow = true,
 }) => {
   const insets = useSafeAreaInsets();
+  const authUser = useSelector(
+    (s: RootState) => s.auth.user,
+  ) as Record<string, unknown> | null;
+  const { locationLine } = useLocationDisplay(getSavedAddress(authUser));
+
+  const userName = userNameOverride ?? getUserDisplayName(authUser);
+  const userAddress = userAddressOverride ?? locationLine;
+  const profileImageUri =
+    profileImageOverride !== undefined
+      ? profileImageOverride
+      : getUserAvatarUri(authUser);
+
+  const avatarInitial = (userName.trim() || 'U').charAt(0).toUpperCase();
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       {/* Top row: Profile + Name + Address | AI Chat + Notification */}
@@ -63,7 +88,7 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
             {profileImageUri ? (
               <Image source={{ uri: profileImageUri }} style={styles.avatar} />
             ) : (
-              <Text style={styles.avatarPlaceholder}>{userName.charAt(0)}</Text>
+              <Text style={styles.avatarPlaceholder}>{avatarInitial}</Text>
             )}
           </View>
           <View style={styles.nameAddressWrap}>
@@ -72,7 +97,9 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
               <View style={styles.locationIconWrap}>
                 <Icons.LocationIcon width={14} height={14} />
               </View>
-              <Text style={styles.address} numberOfLines={1}>{userAddress}</Text>
+              <Text style={styles.address} numberOfLines={2}>
+                {userAddress}
+              </Text>
             </View>
           </View>
         </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useDispatch } from 'react-redux';
 import { Svg, Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
@@ -17,11 +19,43 @@ import Button from '../../components/Button';
 import Colors from '../../constants/colors';
 import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
+import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import { persistAuthToken, persistAuthUser, sanitizeUser } from '../../utils/authSession';
+import { setUser } from '../../store/slices/authSlice';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
 
 type VerifyYourEmailScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'VerifyEmail'>;
 
 const VerifyYourEmail: React.FC = () => {
   const navigation = useNavigation<VerifyYourEmailScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'VerifyEmail'>>();
+  const dispatch = useDispatch();
+  const email = route.params?.email ?? '';
+
+  const { onRequest: verifyOtp, isPending: verifying } = useApi<{
+    email: string;
+    code: string;
+  }>({
+    key: 'verify-signup-otp',
+    isSuccessToast: false,
+  });
+
+  const { onRequest: resendSignupOtp, isPending: resending } = useApi<{
+    email: string;
+    purpose: string;
+  }>({
+    key: 'resend-signup-otp',
+    isSuccessToast: false,
+  });
+
+  useEffect(() => {
+    if (!email) {
+      showErrorToast('Missing email', 'Please sign up again.');
+      const t = setTimeout(() => navigation.goBack(), 600);
+      return () => clearTimeout(t);
+    }
+  }, [email, navigation]);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -81,19 +115,48 @@ const VerifyYourEmail: React.FC = () => {
 
   const handleVerify = () => {
     const otpCode = otp.join('');
-    if (otpCode.length === 6) {
-      // Handle verification logic here
-      console.log('Verify OTP:', otpCode);
-      // Navigate to home or next screen
-      // For now, just log
+    if (otpCode.length !== 6 || !email) {
+      return;
     }
+    verifyOtp({
+      path: authPaths.verifySignupOtp,
+      data: { email, code: otpCode },
+      onSuccess: async (data: { token: string; user: Record<string, unknown> }) => {
+        const token = data?.token;
+        const rawUser = data?.user;
+        const safeUser = sanitizeUser(rawUser as Record<string, unknown>);
+        if (token) {
+          await persistAuthToken(token);
+        }
+        if (safeUser) {
+          await persistAuthUser(safeUser as Record<string, unknown>);
+        }
+        dispatch(setUser(safeUser ?? { sessionRestored: true }));
+        showSuccessToast('Email verified', 'Your account is ready. Welcome!');
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Invalid or expired code.');
+      },
+    });
   };
 
   const handleResend = () => {
+    if (!email) return;
     setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
-    // Handle resend logic
-    console.log('Resend code');
+    resendSignupOtp({
+      path: authPaths.resendOtp,
+      data: { email, purpose: 'SIGNUP' },
+      onSuccess: () => {
+        showSuccessToast(
+          'Code sent',
+          'If an account exists for this email, a new code has been sent.',
+        );
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Could not resend code.');
+      },
+    });
   };
 
   const handleBack = () => {
@@ -116,7 +179,12 @@ const VerifyYourEmail: React.FC = () => {
             <Icons.Back width={24} height={24} />
           </TouchableOpacity>
           <View style={styles.logoSection}>
-            <Icons.Logo1 width={250} height={125} />
+            <Image
+              source={require('../../assets/svg/logo1.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="MdTelemed logo"
+            />
           </View>
         </View>
 
@@ -155,7 +223,8 @@ const VerifyYourEmail: React.FC = () => {
             </Svg>
           </View>
           <Text style={styles.verifySubtitle}>
-            We've sent a verification code to your email address. Please enter the code below to verify your account.
+            We've sent a verification code to{' '}
+            <Text style={styles.emailHighlight}>{email || 'your email'}</Text>. Please enter the code below to verify your account.
           </Text>
         </View>
 
@@ -189,6 +258,8 @@ const VerifyYourEmail: React.FC = () => {
           onPress={handleVerify}
           style={styles.verifyButton}
           textStyle={styles.verifyButtonText}
+          loading={verifying}
+          disabled={resending || otp.join('').length !== 6}
         />
 
         {/* Resend Code Section */}
@@ -236,6 +307,12 @@ const styles = StyleSheet.create({
   logoSection: {
     alignItems: 'center',
     flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  logo: {
+    width: 80,
+    height: 80,
   },
   verifyPrompt: {
     marginBottom: 32,
@@ -254,6 +331,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '88%',
   },
+  emailHighlight: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -265,8 +348,8 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 80,
     borderWidth: 1,
-    borderColor: Colors.inputBorder,
-    backgroundColor: Colors.inputBackground,
+    borderColor: 'rgba(37, 99, 235, 0.22)',
+    backgroundColor: Colors.gradient.background.start,
     textAlign: 'center',
     fontSize: 24,
     fontWeight: '700',
@@ -275,7 +358,8 @@ const styles = StyleSheet.create({
   },
   otpInputFilled: {
     borderColor: Colors.primary,
-    backgroundColor: '#F5EFFF',
+    /** Primary-light tint (matches Colors.primaryLight #93C5FD at ~55% opacity on white) */
+    backgroundColor: 'rgba(147, 197, 253, 0.55)',
   },
   verifyButton: {
     backgroundColor: Colors.buttonPrimary,

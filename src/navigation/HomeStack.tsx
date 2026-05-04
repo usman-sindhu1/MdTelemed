@@ -31,24 +31,16 @@ export type HomeStackParamList = {
     selectedCategoryId?: string;
   } | undefined;
   HomeDoctorDetails: {
-    doctor: {
-      id: string;
-      name: string;
-      specialty: string;
-      rating: string;
-      years: string;
-      patients: string;
-      fee: string;
-      imageUri: string;
-    };
+    /** Doctor user id from `GET /api/public/doctors`. */
+    doctorId: string;
     selectedCategoryId?: string;
   };
 };
 
 export type AppointmentsStackParamList = {
   AppointmentsMain: undefined;
-  AppointmentDetails: undefined;
-  PrescriptionDetails: undefined;
+  AppointmentDetails: { appointmentId?: string } | undefined;
+  PrescriptionDetails: { prescriptionId: string };
   JoinSession: undefined;
   SessionJoined: undefined;
   InSessionChat: undefined;
@@ -67,7 +59,7 @@ export type AppointmentsStackParamList = {
 
 export type PrescriptionStackParamList = {
   PrescriptionMain: undefined;
-  PrescriptionDetails: undefined;
+  PrescriptionDetails: { prescriptionId: string };
 };
 
 export type NotificationsStackParamList = {

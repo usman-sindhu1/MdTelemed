@@ -1,4 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -49,6 +54,10 @@ export interface PhoneInputProps {
    * When true, render country selector and phone number as two separate bordered inputs (Figma style)
    */
   separateInputs?: boolean;
+  /**
+   * When false, the phone field is not editable (mirrors TextInput editable).
+   */
+  editable?: boolean;
 }
 
 /**
@@ -68,18 +77,24 @@ export interface PhoneInputProps {
 const INPUT_HEIGHT = 48;
 const INPUT_BORDER_RADIUS = 24;
 
-export const PhoneInput: React.FC<PhoneInputProps> = ({
-  value = '',
-  onChangeText,
-  onChangeFormattedText,
-  onChangeCountry,
-  defaultCode = 'PK',
-  placeholder = 'Phone number',
-  error,
-  onValidationChange,
-  separateInputs = false,
-}) => {
+export const PhoneInput = forwardRef<PhoneNumberInput, PhoneInputProps>(
+  (
+    {
+      value = '',
+      onChangeText,
+      onChangeFormattedText,
+      onChangeCountry,
+      defaultCode = 'PK',
+      placeholder = 'Phone number',
+      error,
+      onValidationChange,
+      separateInputs = false,
+      editable = true,
+    },
+    ref,
+  ) => {
   const phoneInputRef = useRef<PhoneNumberInput>(null);
+  useImperativeHandle(ref, () => phoneInputRef.current as PhoneNumberInput);
   const [isValid, setIsValid] = useState<boolean | null>(null);
 
   const handleChangeText = (text: string) => {
@@ -172,14 +187,17 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             autoCorrect: false,
             keyboardType: 'numeric',
             maxLength: 15,
+            editable,
           }}
-          disableArrowIcon={false}
+          disableArrowIcon={!editable}
         />
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
-};
+});
+
+PhoneInput.displayName = 'PhoneInput';
 
 const styles = StyleSheet.create({
   wrapper: {

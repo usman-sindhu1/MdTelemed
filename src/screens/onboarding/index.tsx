@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
+import { markOnboardingComplete } from '../../utils/authSession';
 import Screen1 from './Screen1';
 import Screen2 from './Screen2';
 import Screen3 from './Screen3';
@@ -42,16 +43,21 @@ const OnboardingScreens: React.FC = () => {
     setCurrentIndex(index);
   };
 
+  const goToSignIn = async () => {
+    await markOnboardingComplete();
+    navigation.replace('SignIn');
+  };
+
   const handleButtonPress = () => {
     if (currentIndex < screens.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
     } else {
-      navigation.replace('SignIn');
+      goToSignIn();
     }
   };
 
   const handleSkip = () => {
-    navigation.replace('SignIn');
+    goToSignIn();
   };
 
   const handleDotPress = (index: number) => {

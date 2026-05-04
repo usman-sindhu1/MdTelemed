@@ -112,13 +112,8 @@ const InboxChat: React.FC = () => {
 
   let currentDate = '';
 
-  return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-      >
+  const chatBody = (
+    <>
         <View style={styles.headerBlock}>
           <View style={[styles.headerContainer, { paddingTop: insets.top + 12 }]}>
             <View style={styles.headerActionsRow}>
@@ -237,7 +232,22 @@ const InboxChat: React.FC = () => {
             <Icons.SentMessageIcon width={20} height={20} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      {Platform.OS === 'android' ? (
+        <View style={styles.container}>{chatBody}</View>
+      ) : (
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior="padding"
+          keyboardVerticalOffset={8}
+        >
+          {chatBody}
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 };

@@ -7,15 +7,19 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
+import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
 
 const SURFACE_BASE = '#FFFFFF';
 const PRIMARY = '#2563EB';
@@ -31,10 +35,27 @@ type VerifyYourCodeScreenNavigationProp = NativeStackNavigationProp<AuthStackPar
 
 const VerifyYourCode: React.FC = () => {
   const navigation = useNavigation<VerifyYourCodeScreenNavigationProp>();
+  const route = useRoute<RouteProp<AuthStackParamList, 'VerifyCode'>>();
   const insets = useSafeAreaInsets();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [email] = useState('laslie.alexander@gmail.com');
+  const email = route.params?.email ?? '';
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  const { onRequest: verifyResetOtp, isPending: verifying } = useApi<{
+    email: string;
+    code: string;
+  }>({
+    key: 'verify-reset-otp',
+    isSuccessToast: false,
+  });
+
+  const { onRequest: resendResetOtp, isPending: resending } = useApi<{
+    email: string;
+    purpose: string;
+  }>({
+    key: 'resend-reset-otp',
+    isSuccessToast: false,
+  });
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) {
@@ -69,14 +90,40 @@ const VerifyYourCode: React.FC = () => {
 
   const handleVerify = () => {
     const otpCode = otp.join('');
-    if (otpCode.length === 6) {
-      navigation.navigate('ChangePassword');
+    if (otpCode.length !== 6 || !email) {
+      return;
     }
+    verifyResetOtp({
+      path: authPaths.verifyResetPasswordOtp,
+      data: { email, code: otpCode },
+      onSuccess: (data: { resetToken: string }) => {
+        const token = data?.resetToken;
+        if (!token) {
+          showErrorToast('Missing reset token from the server.');
+          return;
+        }
+        navigation.navigate('ChangePassword', { resetToken: token });
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Invalid or expired code.');
+      },
+    });
   };
 
   const handleResend = () => {
+    if (!email) return;
     setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
+    resendResetOtp({
+      path: authPaths.resendOtp,
+      data: { email, purpose: 'RESET_PASSWORD' },
+      onSuccess: () => {
+        showSuccessToast('Code sent', 'If that email exists, a new code has been sent.');
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Could not resend code.');
+      },
+    });
   };
 
   const handleBack = () => navigation.goBack();
@@ -157,13 +204,19 @@ const VerifyYourCode: React.FC = () => {
               </TouchableOpacity>
             </View>
             <TouchableOpacity
-              style={[styles.verifyButton, !isComplete && styles.verifyButtonDisabled]}
+              style={[styles.verifyButton, (!isComplete || verifying || resending) && styles.verifyButtonDisabled]}
               onPress={handleVerify}
               activeOpacity={0.85}
-              disabled={!isComplete}
+              disabled={!isComplete || verifying || resending}
             >
-              <Text style={styles.verifyButtonText}>Verify</Text>
-              <Text style={styles.verifyButtonArrow}>→</Text>
+              {verifying ? (
+                <ActivityIndicator color={Colors.buttonText} />
+              ) : (
+                <>
+                  <Text style={styles.verifyButtonText}>Verify</Text>
+                  <Text style={styles.verifyButtonArrow}>→</Text>
+                </>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>

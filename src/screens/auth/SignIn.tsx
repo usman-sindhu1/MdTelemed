@@ -6,7 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
+import { showErrorToast } from '../../utils/appToast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +23,14 @@ import Typography from '../../constants/typography';
 import Fonts from '../../constants/fonts';
 import { signInSchema, validateWithSchema, validateField } from '../../utils/validation';
 import { setUser } from '../../store/slices/authSlice';
+import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import {
+  getDeviceTimeZone,
+  persistAuthToken,
+  persistAuthUser,
+  sanitizeUser,
+} from '../../utils/authSession';
 
 const SURFACE_BASE = '#FFFFFF';
 const PRIMARY = '#2563EB';
@@ -47,6 +57,15 @@ const SignIn: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const { onRequest: loginRequest, isPending: loginPending } = useApi<{
+    email: string;
+    password: string;
+    timezone?: string;
+  }>({
+    key: 'patient-login',
+    isSuccessToast: false,
+  });
 
   const handleEmailChange = async (text: string) => {
     setEmail(text);
@@ -133,7 +152,27 @@ const SignIn: React.FC = () => {
       return;
     }
     setErrors({});
-    dispatch(setUser({ id: '1', email, name: 'User' }));
+    loginRequest({
+      path: authPaths.login,
+      data: {
+        email: email.trim(),
+        password,
+        timezone: getDeviceTimeZone(),
+      },
+      onSuccess: async (data: { token: string; user: Record<string, unknown> }) => {
+        const safeUser = sanitizeUser(data?.user as Record<string, unknown>);
+        if (data?.token) {
+          await persistAuthToken(data.token);
+        }
+        if (safeUser) {
+          await persistAuthUser(safeUser as Record<string, unknown>);
+        }
+        dispatch(setUser(safeUser ?? { sessionRestored: true }));
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Could not sign in.');
+      },
+    });
   };
 
   const handleForgotPassword = () => {
@@ -241,12 +280,19 @@ const SignIn: React.FC = () => {
 
             {/* Login Button with arrow */}
             <TouchableOpacity
-              style={styles.loginButton}
+              style={[styles.loginButton, loginPending && styles.loginButtonDisabled]}
               onPress={handleLogin}
               activeOpacity={0.85}
+              disabled={loginPending}
             >
-              <Text style={styles.loginButtonText}>Login to Account</Text>
-              <Text style={styles.loginButtonArrow}>→</Text>
+              {loginPending ? (
+                <ActivityIndicator color={Colors.buttonText} />
+              ) : (
+                <>
+                  <Text style={styles.loginButtonText}>Login to Account</Text>
+                  <Text style={styles.loginButtonArrow}>→</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Divider: or continue with */}
@@ -398,6 +444,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginBottom: 24,
+    minHeight: 52,
+  },
+  loginButtonDisabled: {
+    opacity: 0.85,
   },
   loginButtonText: {
     fontFamily: Fonts.raleway,

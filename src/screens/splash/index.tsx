@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 import Icons from '../../assets/svg';
 import Fonts from '../../constants/fonts';
+import { hasCompletedOnboarding } from '../../utils/authSession';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const LOADING_BAR_WIDTH = SCREEN_WIDTH * 0.75;
@@ -35,7 +36,10 @@ const SplashScreen: React.FC = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
+      (async () => {
+        const done = await hasCompletedOnboarding();
+        navigation.replace(done ? 'SignIn' : 'Onboarding');
+      })();
     }, SPLASH_DURATION);
 
     return () => clearTimeout(timer);

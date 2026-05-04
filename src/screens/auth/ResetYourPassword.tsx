@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,6 +18,9 @@ import Input from '../../components/Input';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { signInSchema, validateField } from '../../utils/validation';
+import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import { showErrorToast } from '../../utils/appToast';
 
 const SURFACE_BASE = '#FFFFFF';
 const PRIMARY = '#2563EB';
@@ -37,6 +41,11 @@ const ResetYourPassword: React.FC = () => {
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const { onRequest, isPending } = useApi<{ email: string }>({
+    key: 'reset-password-request',
+    isSuccessToast: false,
+  });
 
   const handleEmailChange = async (text: string) => {
     setEmail(text);
@@ -88,7 +97,16 @@ const ResetYourPassword: React.FC = () => {
       return;
     }
     setErrors({});
-    navigation.navigate('VerifyCode');
+    onRequest({
+      path: authPaths.resetPassword,
+      data: { email: email.trim() },
+      onSuccess: () => {
+        navigation.navigate('VerifyCode', { email: email.trim() });
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Could not start password reset.');
+      },
+    });
   };
 
   const handleBack = () => {
@@ -175,12 +193,19 @@ const ResetYourPassword: React.FC = () => {
 
             {/* Send OTP button */}
             <TouchableOpacity
-              style={styles.sendButton}
+              style={[styles.sendButton, isPending && { opacity: 0.85 }]}
               onPress={handleSendResetLink}
               activeOpacity={0.85}
+              disabled={isPending}
             >
-              <Text style={styles.sendButtonText}>Send OTP</Text>
-              <Text style={styles.sendButtonArrow}>→</Text>
+              {isPending ? (
+                <ActivityIndicator color={Colors.buttonText} />
+              ) : (
+                <>
+                  <Text style={styles.sendButtonText}>Send OTP</Text>
+                  <Text style={styles.sendButtonArrow}>→</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Sign In link - scrolls with content */}

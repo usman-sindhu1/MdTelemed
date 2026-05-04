@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +16,9 @@ import PasswordInput from '../../components/PasswordInput';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { DrawerParamList } from '../../navigation/HomeStackRoot';
+import useApi from '../../hooks/UseApi';
+import { authPaths } from '../../constants/authPaths';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
 
 type ChangePasswordNavigationProp = NativeStackNavigationProp<
   DrawerParamList,
@@ -28,13 +32,42 @@ const ChangePassword: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const { onRequest, isPending } = useApi<{ oldPassword: string; newPassword: string }>({
+    key: 'change-password-logged-in',
+    isSuccessToast: false,
+  });
+
   const handleBackPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const handleUpdatePassword = () => {
-    console.log('Update password pressed');
-    // TODO: Implement password update logic
+  const handleUpdatePassword = async () => {
+    if (oldPassword.length < 6) {
+      showErrorToast('Current password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showErrorToast('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showErrorToast('New password and confirmation do not match.');
+      return;
+    }
+
+    onRequest({
+      path: authPaths.changePassword,
+      data: { oldPassword, newPassword },
+      onSuccess: () => {
+        showSuccessToast('Password updated');
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      },
+      onError: (err: any) => {
+        showErrorToast(err?.message || 'Could not change password. Try again.');
+      },
+    });
   };
 
   return (
@@ -77,11 +110,16 @@ const ChangePassword: React.FC = () => {
           {/* Update Password Button */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.updateButton}
+              style={[styles.updateButton, isPending && { opacity: 0.85 }]}
               onPress={handleUpdatePassword}
               activeOpacity={0.7}
+              disabled={isPending}
             >
-              <Text style={styles.updateButtonText}>Update Password</Text>
+              {isPending ? (
+                <ActivityIndicator color={Colors.buttonText} />
+              ) : (
+                <Text style={styles.updateButtonText}>Update Password</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

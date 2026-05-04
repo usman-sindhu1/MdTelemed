@@ -55,20 +55,17 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError) => {
-    if (error.response) {
-      // Server responded with error status
-      console.error(`❌ Response error ${error.response.status}:`, error.response.data);
-    } else if (error.request) {
-      // Request was made but no response received
-      console.error("❌ No response received. Check your network connection and API server status.");
-      console.error("Request details:", {
-        url: error.config?.url,
-        method: error.config?.method,
-        timeout: error.config?.timeout,
-      });
-    } else {
-      // Something else happened
-      console.error("❌ Error:", error.message);
+    if (__DEV__ && error.response) {
+      const s = error.response.status;
+      if (s >= 500) {
+        console.warn(`Response ${s}:`, error.response.data);
+      } else {
+        console.log(`Response ${s}:`, error.response.data);
+      }
+    } else if (__DEV__ && error.request) {
+      console.warn("No response from server", error.config?.url);
+    } else if (__DEV__) {
+      console.warn("Request error:", error.message);
     }
     return Promise.reject(error);
   }
@@ -148,22 +145,41 @@ const useApi = <T,>({
       },
       {
         onSuccess: (response: any) => {
+          const body = response?.data;
+          if (body && body.success === false && body.message) {
+            const fakeErr = Object.assign(new Error(body.message), {
+              response: response,
+              isApiBusinessError: true,
+            });
+            onError(fakeErr);
+            return;
+          }
           if (isSuccessToast) {
             // Add success toast if needed
           }
           console.log("✅ Success:", response);
-          onSuccess(response.data.data);
+          onSuccess(body?.data ?? body);
         },
         onError: (error: any) => {
-          console.error("❌ API error:", error);
-          
+          if (__DEV__) {
+            const msg = axios.isAxiosError(error)
+              ? (error.response?.data as { message?: string })?.message || error.message
+              : error?.message;
+            console.log("API error:", msg);
+          }
           // Provide user-friendly error message
           let errorMessage = "An error occurred. Please try again.";
           
           if (axios.isAxiosError(error)) {
             if (error.response) {
-              // Server responded with error
-              errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+              const data = error.response.data as {
+                message?: string;
+                issues?: { message?: string }[];
+              };
+              errorMessage =
+                data?.issues?.[0]?.message ||
+                data?.message ||
+                `Server error: ${error.response.status}`;
             } else if (error.request) {
               // No response received
               errorMessage = "Cannot connect to server. Please check your internet connection and ensure the API server is running.";
