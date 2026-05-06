@@ -85,12 +85,14 @@ export const Input: React.FC<InputProps> = ({
   labelStyle,
   ...props
 }) => {
+  const multiline = Boolean(props.multiline);
   return (
     <View style={[styles.wrapper, size === 'half' && styles.wrapperHalf]}>
       {label ? <Text style={[styles.label, labelStyle]}>{label}</Text> : null}
       <TextInput
         style={[
           styles.base,
+          multiline && styles.multilineOverrides,
           styles[size],
           error && styles.inputError,
           style,
@@ -127,6 +129,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     textAlignVertical: 'center', 
     color: Colors.inputText,
+  } as ViewStyle & TextStyle,
+  multilineOverrides: {
+    height: undefined,
+    minHeight: 112,
+    paddingTop: 14,
+    paddingBottom: 14,
+    textAlignVertical: 'top',
   } as ViewStyle & TextStyle,
   inputError: {
     borderColor: Colors.inputBorderError,

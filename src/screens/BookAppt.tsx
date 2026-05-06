@@ -1,117 +1,240 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
   TouchableOpacity,
-  Dimensions,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
   Animated,
+  Easing,
 } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+  type RouteProp,
+} from '@react-navigation/native';
+import type {
+  BookingDoctorParams,
+  DrawerParamList,
+} from '../navigation/HomeStackRoot';
 import SimpleBackHeader from '../components/common/SimpleBackHeader';
 import Button from '../components/Button';
 import Icons from '../assets/svg';
 import Colors from '../constants/colors';
 import Fonts from '../constants/fonts';
-import type { DrawerParamList } from '../navigation/HomeStackRoot';
+import BookingProgressCard from '../components/booking/BookingProgressCard';
+import BookingFlowDoctorCard from '../components/booking/BookingFlowDoctorCard';
+import ShimmerBox from '../components/common/ShimmerBox';
+import { usePublicDoctorsInfinite } from '../hooks/usePublicDoctorsInfinite';
+import {
+  mapPublicDoctorToBookingParams,
+} from '../utils/publicDoctorDisplay';
+import { showErrorToast } from '../utils/appToast';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTENT_PADDING = 16;
-const GRID_GAP = 12;
-const CARD_SIZE = (SCREEN_WIDTH - CONTENT_PADDING * 2 - GRID_GAP * 2) / 3;
+const DOCTOR_PAGE_SIZE = 5;
 
-const SERVICE_CATEGORIES = [
-  { id: '1', name: 'Allergies', Icon: Icons.AllergyIcon },
-  { id: '2', name: 'Dentistry', Icon: Icons.DentistryIcon },
-  { id: '3', name: 'Dermatology', Icon: Icons.DermatologyIcon },
-  { id: '4', name: 'Endocrinology', Icon: Icons.EndocrinologyIcon },
-  { id: '5', name: 'Gastroenterology', Icon: Icons.GastroenterologyIcon },
-  { id: '6', name: 'Immunology', Icon: Icons.ImmunologyIcon },
-  { id: '7', name: 'Nephrology', Icon: Icons.NephrologyIcon },
-  { id: '8', name: 'Hematology', Icon: Icons.HematologyIcon },
-  { id: '9', name: 'Neurology', Icon: Icons.NeurologyServiceIcon },
-];
+const DOCTOR_SKELETON_CARDS = 5;
 
-const CONSULTATION_DURATIONS = [
-  { id: 'standard', label: 'Standard Consultation (15 Minutes)' },
-  { id: 'extended', label: 'Extended Consultation (30 Minutes)' },
-  { id: 'quick', label: 'Quick Script Repeat' },
-];
-
-type BookApptRouteProp = RouteProp<DrawerParamList, 'BookAppt'>;
+type BookApptRoute = RouteProp<DrawerParamList, 'BookAppt'>;
 
 const BookAppt: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute<BookApptRouteProp>();
+  const route = useRoute<BookApptRoute>();
+  const insets = useSafeAreaInsets();
+
   const [searchText, setSearchText] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
-  const [selectedDurationId, setSelectedDurationId] = useState<string | null>(null);
-  const buttonAnim = useRef(new Animated.Value(0)).current;
-  const preselectedCategoryId = route.params?.preselectedCategoryId;
-  const selectedDoctor = route.params?.selectedDoctor;
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+  const [doctorPageIndex, setDoctorPageIndex] = useState(0);
+  const actionAnim = useRef(new Animated.Value(0)).current;
 
-  const progressPercent = selectedServiceId ? 16 : 0;
+  const paramDoctor = route.params?.selectedDoctor;
 
-  useEffect(() => {
-    Animated.timing(buttonAnim, {
-      toValue: selectedDurationId ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [selectedDurationId, buttonAnim]);
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePublicDoctorsInfinite(searchText);
 
-  // Reset selection each time screen gains focus
-  useFocusEffect(
-    useCallback(() => {
-      setSelectedServiceId(null);
-      setSelectedDurationId(null);
-
-      if (preselectedCategoryId) {
-        const matchedService = SERVICE_CATEGORIES.find(
-          (service) => service.name.toLowerCase() === preselectedCategoryId.toLowerCase(),
-        );
-        if (matchedService) {
-          setSelectedServiceId(matchedService.id);
+  const apiDoctors = useMemo((): BookingDoctorParams[] => {
+    const pages = data?.pages ?? [];
+    const list: BookingDoctorParams[] = [];
+    for (const page of pages) {
+      for (const item of page.items ?? []) {
+        const mapped = mapPublicDoctorToBookingParams(item);
+        if (mapped.id) {
+          list.push({
+            ...mapped,
+            id: mapped.id,
+          } as BookingDoctorParams);
         }
       }
-    }, [preselectedCategoryId]),
+    }
+    return list;
+  }, [data]);
+
+  const doctors = useMemo(() => {
+    if (!paramDoctor?.id) return apiDoctors;
+    const idStr = String(paramDoctor.id);
+    const inList = apiDoctors.some((d) => String(d.id) === idStr);
+    if (inList) return apiDoctors;
+    return [paramDoctor as BookingDoctorParams, ...apiDoctors];
+  }, [apiDoctors, paramDoctor]);
+
+  const selectedDoctor =
+    doctors.find((d) => String(d.id) === String(selectedId)) ?? null;
+
+  const totalDoctorPages = Math.max(
+    1,
+    Math.ceil(doctors.length / DOCTOR_PAGE_SIZE),
   );
+  const showDoctorPagination = doctors.length > DOCTOR_PAGE_SIZE;
+
+  const pagedDoctors = useMemo(() => {
+    const start = doctorPageIndex * DOCTOR_PAGE_SIZE;
+    return doctors.slice(start, start + DOCTOR_PAGE_SIZE);
+  }, [doctors, doctorPageIndex]);
+
+  useEffect(() => {
+    setDoctorPageIndex((p) => Math.min(p, Math.max(0, totalDoctorPages - 1)));
+  }, [doctors.length, totalDoctorPages]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // If a doctor is explicitly passed in, select it; otherwise reset screen state
+      // so re-entering the screen starts fresh.
+      if (route.params?.selectedDoctor?.id != null) {
+        setSelectedId(route.params!.selectedDoctor!.id);
+      } else {
+        setSelectedId(null);
+        // Keep search + cached list so the screen doesn't refetch/show shimmer on every revisit.
+      }
+    }, [route.params?.selectedDoctor?.id]),
+  );
+
+  useEffect(() => {
+    if (isError && error instanceof Error) {
+      showErrorToast('Could not load doctors', error.message);
+    }
+  }, [isError, error]);
+
+  useEffect(() => {
+    if (!selectedDoctor) {
+      actionAnim.setValue(0);
+      return;
+    }
+    actionAnim.setValue(0);
+    Animated.timing(actionAnim, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [selectedDoctor, actionAnim]);
 
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  const handleServicePress = (id: string) => {
-    if (selectedServiceId === id) {
-      setSelectedServiceId(null);
-      setSelectedDurationId(null);
-    } else {
-      setSelectedServiceId(id);
-    }
-  };
-
-  const handleFilterPress = () => {
-    console.log('Filter pressed');
-  };
-
   const handleContinue = () => {
-    (navigation as any).navigate('BookApptSelectDoctor', {
-      selectedDoctor,
-      preselectedCategoryId,
-    });
+    if (!selectedDoctor) return;
+    (navigation as unknown as { navigate: (name: keyof DrawerParamList, p?: object) => void }).navigate(
+      'BookApptDoctorDetail',
+      { selectedDoctor },
+    );
   };
 
   const handleCancelProcess = () => {
-    setSelectedServiceId(null);
-    setSelectedDurationId(null);
+    setSelectedId(null);
+    setSearchText('');
   };
 
-  const handleDurationPress = (id: string) => {
-    setSelectedDurationId((prev) => (prev === id ? null : id));
-  };
+  const progressPercent = selectedDoctor ? 22 : 0;
+
+  const DoctorCardSkeleton = () => (
+    <View style={styles.skelCard}>
+      <View style={styles.skelTopRow}>
+        <ShimmerBox width={64} height={64} borderRadius={16} />
+        <View style={styles.skelTextCol}>
+          <ShimmerBox height={18} borderRadius={8} />
+          <ShimmerBox height={14} borderRadius={6} width="70%" />
+        </View>
+      </View>
+      <View style={styles.skelStatsRow}>
+        <ShimmerBox height={38} borderRadius={12} style={{ flex: 1 }} />
+        <ShimmerBox height={38} borderRadius={12} style={{ flex: 1 }} />
+        <ShimmerBox height={38} borderRadius={12} style={{ flex: 1 }} />
+      </View>
+      <View style={styles.skelFooterRow}>
+        <ShimmerBox height={14} borderRadius={6} width="55%" />
+        <ShimmerBox height={32} borderRadius={999} width={84} />
+      </View>
+    </View>
+  );
+
+  const listHeader = (
+    <>
+      <Text style={styles.sectionTitle}>Choose your doctor</Text>
+      <Text style={styles.sectionDescription}>
+        Select a clinician for your upcoming visit. You’ll confirm details,
+        choose a slot, then complete your booking in three steps.
+      </Text>
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search doctors..."
+          placeholderTextColor="#9CA3AF"
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity activeOpacity={0.7} onPress={() => refetch()}>
+          <Icons.Search width={20} height={20} />
+        </TouchableOpacity>
+      </View>
+      {isLoading && doctors.length === 0 ? (
+        <View style={styles.skelList}>
+          {Array.from({ length: DOCTOR_SKELETON_CARDS }).map((_, i) => (
+            <DoctorCardSkeleton key={`sk-${i}`} />
+          ))}
+        </View>
+      ) : null}
+      {!isLoading && !isError && doctors.length === 0 ? (
+        <Text style={styles.emptyText}>No doctors match your search.</Text>
+      ) : null}
+    </>
+  );
+
+  const listFooter = (
+    <View>
+      {isFetchingNextPage ? (
+        <View style={styles.footerShimmer}>
+          <ShimmerBox height={14} borderRadius={999} width={160} />
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const canPrevDoctorPage = doctorPageIndex > 0;
+  const canNextDoctorPage = doctorPageIndex < totalDoctorPages - 1;
 
   return (
     <View style={styles.container}>
@@ -122,142 +245,121 @@ const BookAppt: React.FC = () => {
         bottomRadius={24}
       />
 
-      {/* Progress card straddles header bottom: half up (header), half down (content) */}
-      <View style={styles.progressCardWrap}>
-        <View style={styles.progressCardShadowWrap}>
-          <View style={[styles.card, styles.progressCard]}>
-          <Text style={styles.cardSubtitle}>Appointment Booking progress</Text>
-          <View style={styles.cardRow}>
-            <Text style={styles.percentText}>{progressPercent}% completed</Text>
-            <View style={styles.timeRow}>
-              <Icons.NestClockFarsightAnalogIcon width={14} height={14} />
-              <Text style={styles.timeText}>10min</Text>
-            </View>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${Math.min(progressPercent, 100)}%` }]} />
-            <View style={styles.progressDots}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <View key={i} style={styles.dot} />
-              ))}
-            </View>
-          </View>
-        </View>
-        </View>
+      <View style={styles.progressWrap}>
+        <BookingProgressCard
+          subtitle="Appointment Booking progress"
+          percent={progressPercent}
+          dotCount={4}
+          activeDotIndex={0}
+        />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* What do you need help with? */}
-        <Text style={styles.sectionTitle}>What do you need help with?</Text>
-        <Text style={styles.sectionDescription}>
-          Lorem ipsum dolor sit amet consectetur adipiscin elit Ut et massa mi.
-        </Text>
-
-        {/* Search bar */}
-        <View style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search your service"
-            placeholderTextColor="#9CA3AF"
-            value={searchText}
-            onChangeText={setSearchText}
+      <FlatList
+        style={styles.listFlex}
+        data={pagedDoctors}
+        keyExtractor={(item) => String(item.id)}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        refreshControl={
+          <RefreshControl refreshing={isFetching && !isFetchingNextPage} onRefresh={refetch} />
+        }
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage && !isLoading) {
+            void fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.35}
+        renderItem={({ item: doc }) => (
+          <BookingFlowDoctorCard
+            doctor={doc}
+            selected={String(selectedId) === String(doc.id)}
+            onPress={() =>
+              setSelectedId((prev) =>
+                prev != null && String(prev) === String(doc.id) ? null : doc.id,
+              )
+            }
           />
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={handleFilterPress}
-            activeOpacity={0.7}
-          >
-            <Icons.PageInfoIcon width={22} height={22} />
-          </TouchableOpacity>
-        </View>
+        )}
+        ItemSeparatorComponent={() => <View style={styles.cardGap} />}
+      />
 
-        {/* Service grid */}
-        <View style={styles.grid}>
-          {SERVICE_CATEGORIES.map((item) => {
-            const isSelected = selectedServiceId === item.id;
-            return (
+      {selectedDoctor || showDoctorPagination ? (
+        <View
+          style={[
+            styles.bottomChrome,
+            { paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
+          {showDoctorPagination ? (
+            <View style={styles.paginationBar}>
               <TouchableOpacity
-                key={item.id}
-                style={[styles.serviceCard, isSelected && styles.serviceCardSelected]}
-                onPress={() => handleServicePress(item.id)}
-                activeOpacity={0.8}
+                style={[styles.pageNavBtn, !canPrevDoctorPage && styles.pageNavBtnDisabled]}
+                disabled={!canPrevDoctorPage}
+                onPress={() => setDoctorPageIndex((i) => Math.max(0, i - 1))}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Previous page of doctors"
               >
-                <View style={styles.serviceIconWrap}>
-                  <item.Icon width={28} height={28} />
-                </View>
-                <Text style={styles.serviceName} numberOfLines={2}>
-                  {item.name}
-                </Text>
+                <Icons.ArrowLeftIcon width={18} height={18} />
+                <Text style={styles.pageNavLabel}>Prev</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Select Consultation Duration - shown when a service is selected */}
-        {selectedServiceId ? (
-          <>
-            <Text style={styles.sectionTitle}>Select Consultation Duration</Text>
-            <View style={styles.durationColumn}>
-              {CONSULTATION_DURATIONS.map((opt) => {
-                const isSelected = selectedDurationId === opt.id;
-                return (
-                  <TouchableOpacity
-                    key={opt.id}
-                    style={[styles.durationChip, isSelected && styles.durationChipSelected]}
-                    onPress={() => handleDurationPress(opt.id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[styles.durationChipText, isSelected && styles.durationChipTextSelected]}
-                      numberOfLines={2}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {selectedServiceId ? (
-              <Animated.View
-                style={[
-                  styles.actionButtons,
-                  {
-                    opacity: buttonAnim,
-                    transform: [
-                      {
-                        translateY: buttonAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [20, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-                pointerEvents={selectedDurationId ? 'auto' : 'none'}
+              <Text style={styles.pageIndicator}>
+                Page {doctorPageIndex + 1} of {totalDoctorPages}
+              </Text>
+              <TouchableOpacity
+                style={[styles.pageNavBtn, !canNextDoctorPage && styles.pageNavBtnDisabled]}
+                disabled={!canNextDoctorPage}
+                onPress={() =>
+                  setDoctorPageIndex((i) => Math.min(totalDoctorPages - 1, i + 1))
+                }
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Next page of doctors"
               >
-                <Button
-                  variant="primary"
-                  title="Continue to Process"
-                  onPress={handleContinue}
-                  style={styles.continueButtonPrimary}
-                />
-                <Button
-                  variant="half-outlined"
-                  title="Cancel Process"
-                  onPress={handleCancelProcess}
-                  style={styles.cancelButtonPrimary}
-                  textStyle={styles.cancelButtonText}
-                />
-              </Animated.View>
-            ) : null}
-          </>
-        ) : null}
-      </ScrollView>
+                <Text style={styles.pageNavLabel}>Next</Text>
+                <Icons.ArrowRight width={18} height={18} />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {selectedDoctor ? (
+            <Animated.View
+              style={[
+                styles.actions,
+                showDoctorPagination && styles.actionsAfterPagination,
+                {
+                  opacity: actionAnim,
+                  transform: [
+                    {
+                      translateY: actionAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+              pointerEvents="box-none"
+            >
+              <Button
+                variant="primary"
+                title="Next"
+                onPress={handleContinue}
+                style={styles.btnPrimary}
+              />
+              <Button
+                variant="half-outlined"
+                title="Cancel"
+                onPress={handleCancelProcess}
+                style={styles.btnGhost}
+                textStyle={styles.btnGhostText}
+              />
+            </Animated.View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -267,103 +369,78 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  progressCardWrap: {
+  progressWrap: {
     marginTop: -40,
     paddingHorizontal: CONTENT_PADDING,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  progressCardShadowWrap: {
+    marginBottom: 12,
+    alignItems: 'stretch',
     width: '100%',
-    maxWidth: 340,
-    alignSelf: 'center',
-    borderRadius: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
   },
-  progressCard: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 4,
-  },
-  scroll: {
+  listFlex: {
     flex: 1,
   },
-  scrollContent: {
+  listContent: {
     padding: CONTENT_PADDING,
-    paddingBottom: 120,
+    paddingBottom: 20,
+    flexGrow: 1,
   },
-  card: {
+  cardGap: {
+    height: 12,
+  },
+  centerPad: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  footerSpinner: {
+    marginVertical: 16,
+  },
+  footerShimmer: {
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+  hint: {
+    marginTop: 8,
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: '#64748B',
+  },
+  skelList: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  skelCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  cardSubtitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#757575',
-    marginBottom: 4,
+  skelTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  cardRow: {
+  skelTextCol: {
+    flex: 1,
+    marginLeft: 14,
+    gap: 10,
+    minWidth: 0,
+  },
+  skelStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  skelFooterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginTop: 14,
   },
-  percentText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.primary || '#2563EB',
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#757575',
-    marginLeft: 4,
-  },
-  progressBar: {
-    height: 5,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 3,
-    overflow: 'visible',
-  },
-  progressFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: '0%',
-    backgroundColor: Colors.primary || '#2563EB',
-    borderRadius: 3,
-  },
-  progressDots: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: Colors.primary || '#2563EB',
+  emptyText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontFamily: Fonts.raleway,
@@ -371,13 +448,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F2937',
     marginBottom: 8,
-    marginTop: 16,
   },
   sectionDescription: {
-    fontFamily: Fonts.raleway,
+    fontFamily: Fonts.openSans,
     fontSize: 14,
-    fontWeight: '400',
-    color: '#757575',
+    color: '#64748B',
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -387,106 +462,75 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 14,
-    marginBottom: 20,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   searchInput: {
     flex: 1,
-    fontFamily: Fonts.raleway,
+    fontFamily: Fonts.openSans,
     fontSize: 14,
     color: '#1F2937',
     paddingVertical: 14,
   },
-  filterButton: {
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -GRID_GAP / 2,
-  },
-  serviceCard: {
-    width: CARD_SIZE,
-    marginHorizontal: GRID_GAP / 2,
-    marginBottom: GRID_GAP,
+  bottomChrome: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
   },
-  serviceIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ECF2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
+  actions: {
+    paddingHorizontal: CONTENT_PADDING,
+    paddingTop: 12,
+    gap: 12,
   },
-  serviceName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1F2937',
-    textAlign: 'center',
-    lineHeight: 16,
+  actionsAfterPagination: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E8EEF5',
   },
-  serviceCardSelected: {
-    borderColor: Colors.primary || '#2563EB',
-    borderWidth: 2,
-    backgroundColor: '#ECF2FD',
+  btnPrimary: {
+    backgroundColor: Colors.primary ?? '#2563EB',
   },
-  durationColumn: {
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  durationChip: {
-    width: '100%',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 10,
-    alignItems: 'stretch',
-    justifyContent: 'center',
-  },
-  durationChipSelected: {
-    borderColor: Colors.primary || '#2563EB',
-    borderWidth: 2,
-    backgroundColor: '#ECF2FD',
-  },
-  durationChipText: {
-    fontFamily: Fonts.raleway,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#757575',
-    textAlign: 'left',
-  },
-  durationChipTextSelected: {
-    color: '#1F2937',
-  },
-  actionButtons: {
-    marginTop: 8,
-  },
-  continueButtonPrimary: {
-    marginBottom: 12,
-    backgroundColor: Colors.primary || '#2563EB',
-  },
-  cancelButtonPrimary: {
+  btnGhost: {
     width: '100%',
     height: 52,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: '#F1F5F9',
     borderWidth: 0,
   },
-  cancelButtonText: {
+  btnGhostText: {
     color: '#1F2937',
+    fontFamily: Fonts.raleway,
+    fontWeight: '700',
+  },
+  paginationBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: CONTENT_PADDING,
+    paddingTop: 10,
+    paddingBottom: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  pageNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  pageNavBtnDisabled: {
+    opacity: 0.35,
+  },
+  pageNavLabel: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary ?? '#2563EB',
+  },
+  pageIndicator: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
   },
 });
 

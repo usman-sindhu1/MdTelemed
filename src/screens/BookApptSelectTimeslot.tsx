@@ -5,45 +5,81 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   Animated,
+  ActivityIndicator,
+  RefreshControl,
+  Easing,
 } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+  type RouteProp,
+} from '@react-navigation/native';
+import type { DrawerParamList } from '../navigation/HomeStackRoot';
 import SimpleBackHeader from '../components/common/SimpleBackHeader';
 import Button from '../components/Button';
 import Icons from '../assets/svg';
 import Colors from '../constants/colors';
 import Fonts from '../constants/fonts';
+import BookingFlowDoctorCard from '../components/booking/BookingFlowDoctorCard';
+import ShimmerBox from '../components/common/ShimmerBox';
+import { useDoctorAvailableSlots } from '../hooks/useDoctorAvailableSlots';
+import {
+  slotsForLocalDay,
+  sortSlotsByStartAscending,
+  formatSlotTimeRange,
+  buildLocalDayKeysWithSlots,
+  localDayKey,
+  type DoctorTimeSlotLite,
+} from '../utils/doctorTimeSlotsDisplay';
+import { showErrorToast } from '../utils/appToast';
 
 const CONTENT_PADDING = 16;
 const PROGRESS_PERCENT = 50;
 
 const DAY_LABELS = ['Su.', 'Mo.', 'Tu.', 'We.', 'Th.', 'Fr.', 'Sa.'];
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
-const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const TIME_SLOTS = [
-  { id: '1', time: '08:00 AM' },
-  { id: '2', time: '09:00 AM' },
-  { id: '3', time: '10:00 AM' },
-  { id: '4', time: '11:00 AM' },
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
-function getDaysForMonthStrip(year: number, month: number): { date: number; dayLabel: string; dayOfWeek: number }[] {
-  const days: { date: number; dayLabel: string; dayOfWeek: number }[] = [];
-  const first = new Date(year, month, 1);
-  const last = new Date(year, month + 1, 0);
-  const start = first.getDate();
-  const end = last.getDate();
-  for (let d = start; d <= Math.min(start + 13, end); d++) {
+function getDaysInCalendarMonth(year: number, month: number): {
+  date: number;
+  dayLabel: string;
+}[] {
+  const last = new Date(year, month + 1, 0).getDate();
+  const days: { date: number; dayLabel: string }[] = [];
+  for (let d = 1; d <= last; d++) {
     const dObj = new Date(year, month, d);
     days.push({
       date: d,
       dayLabel: DAY_LABELS[dObj.getDay()],
-      dayOfWeek: dObj.getDay(),
     });
   }
   return days;
@@ -57,9 +93,34 @@ function formatSelectedDate(date: Date): string {
   return `${weekday}, ${month} ${day}, ${year}`;
 }
 
+function normalizeSlots(
+  raw: Array<{
+    id?: string;
+    startDate?: string;
+    endDate?: string;
+    userId?: string;
+  }>,
+): DoctorTimeSlotLite[] {
+  const out: DoctorTimeSlotLite[] = [];
+  for (const r of raw) {
+    const id = r.id?.trim();
+    const startDate = r.startDate?.trim();
+    if (!id || !startDate) continue;
+    out.push({
+      id,
+      startDate,
+      endDate: typeof r.endDate === 'string' ? r.endDate : undefined,
+      userId: typeof r.userId === 'string' ? r.userId : undefined,
+    });
+  }
+  return sortSlotsByStartAscending(out);
+}
+
+type TimeslotRoute = RouteProp<DrawerParamList, 'BookApptSelectTimeslot'>;
+
 const BookApptSelectTimeslot: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute<any>();
+  const route = useRoute<TimeslotRoute>();
   const [viewMonth, setViewMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -69,11 +130,33 @@ const BookApptSelectTimeslot: React.FC = () => {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   });
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const buttonAnim = useRef(new Animated.Value(0)).current;
+  const actionAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
   const selectedDoctor = route.params?.selectedDoctor;
   const source = route.params?.source;
 
-  // Reset date & slot when the screen gains focus
+  const doctorUserId =
+    selectedDoctor?.id != null ? String(selectedDoctor.id).trim() : undefined;
+
+  const {
+    data: slotsPayload,
+    isLoading: slotsLoading,
+    isFetching: slotsFetching,
+    isError: slotsError,
+    error: slotsErr,
+    refetch: refetchSlots,
+  } = useDoctorAvailableSlots(doctorUserId);
+
+  const allSlots = useMemo(
+    () => normalizeSlots(slotsPayload?.timeSlots ?? []),
+    [slotsPayload],
+  );
+
+  const daysWithSlots = useMemo(
+    () => buildLocalDayKeysWithSlots(allSlots),
+    [allSlots],
+  );
+
   useFocusEffect(
     useCallback(() => {
       const now = new Date();
@@ -85,19 +168,43 @@ const BookApptSelectTimeslot: React.FC = () => {
   );
 
   useEffect(() => {
-    Animated.timing(buttonAnim, {
-      toValue: selectedSlotId ? 1 : 0,
-      duration: 300,
+    if (slotsError && slotsErr instanceof Error) {
+      showErrorToast('Could not load time slots', slotsErr.message);
+    }
+  }, [slotsError, slotsErr]);
+
+  useEffect(() => {
+    if (!selectedSlotId) {
+      actionAnim.setValue(0);
+      return;
+    }
+    actionAnim.setValue(0);
+    Animated.timing(actionAnim, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [selectedSlotId, buttonAnim]);
+  }, [selectedSlotId, actionAnim]);
 
   const year = viewMonth.getFullYear();
   const month = viewMonth.getMonth();
   const monthLabel = `${MONTH_NAMES[month]} ${year}`;
-  const stripDays = useMemo(() => getDaysForMonthStrip(year, month), [year, month]);
+  const stripDays = useMemo(() => getDaysInCalendarMonth(year, month), [year, month]);
+
+  const slotsForSelectedDay = useMemo(
+    () => slotsForLocalDay(allSlots, selectedDate),
+    [allSlots, selectedDate],
+  );
 
   const handleBackPress = () => {
+    if (source === 'bookingFlow' && selectedDoctor) {
+      (navigation as unknown as { navigate: (n: keyof DrawerParamList, p?: object) => void }).navigate(
+        'BookApptDoctorDetail',
+        { selectedDoctor },
+      );
+      return;
+    }
     if (source === 'topDoctors') {
       if ((navigation as any).canGoBack?.()) {
         (navigation as any).goBack();
@@ -111,13 +218,15 @@ const BookApptSelectTimeslot: React.FC = () => {
 
   const handlePrevMonth = () => {
     setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setSelectedSlotId(null);
   };
 
   const handleNextMonth = () => {
     setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setSelectedSlotId(null);
   };
 
-  const isSelected = (dateNum: number) => {
+  const isSelectedDayCell = (dateNum: number) => {
     return (
       selectedDate.getDate() === dateNum &&
       selectedDate.getMonth() === month &&
@@ -127,13 +236,32 @@ const BookApptSelectTimeslot: React.FC = () => {
 
   const onSelectDay = (dateNum: number) => {
     setSelectedDate(new Date(year, month, dateNum));
+    setSelectedSlotId(null);
   };
 
   const handleContinue = () => {
-    (navigation as any).navigate('BookApptPatientSummary');
+    if (!selectedSlotId) {
+      return;
+    }
+    (navigation as unknown as { navigate: (n: keyof DrawerParamList, p?: object) => void }).navigate(
+      'BookApptBookingFlow',
+      {
+        mode: 'book_later',
+        selectedDoctor: selectedDoctor ?? undefined,
+        timeSlotId: selectedSlotId,
+        flowId: `${Date.now()}`,
+      },
+    );
   };
 
   const handleCancelProcess = () => {
+    if (source === 'bookingFlow' && selectedDoctor) {
+      (navigation as unknown as { navigate: (n: keyof DrawerParamList, p?: object) => void }).navigate(
+        'BookApptDoctorDetail',
+        { selectedDoctor },
+      );
+      return;
+    }
     if (source === 'topDoctors') {
       if ((navigation as any).canGoBack?.()) {
         (navigation as any).goBack();
@@ -144,6 +272,13 @@ const BookApptSelectTimeslot: React.FC = () => {
     }
     (navigation as any).navigate('BookApptSelectDoctor');
   };
+
+  const showSlotsLoading = slotsLoading && !slotsPayload;
+
+  const scrollBottomPadding =
+    24 +
+    (selectedSlotId ? 128 : 0) +
+    Math.max(insets.bottom, 8);
 
   return (
     <View style={styles.container}>
@@ -165,12 +300,14 @@ const BookApptSelectTimeslot: React.FC = () => {
                 <Text style={styles.timeText}>10min</Text>
               </View>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${PROGRESS_PERCENT}%` }]} />
-              <View style={styles.progressDots}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <View key={i} style={styles.dot} />
-                ))}
+            <View style={styles.progressTrackInset}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${PROGRESS_PERCENT}%` }]} />
+                <View style={styles.progressDots}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <View key={i} style={styles.dot} />
+                  ))}
+                </View>
               </View>
             </View>
           </View>
@@ -179,23 +316,37 @@ const BookApptSelectTimeslot: React.FC = () => {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: scrollBottomPadding },
+        ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={slotsFetching && !slotsLoading && Boolean(doctorUserId)}
+            onRefresh={() => refetchSlots()}
+          />
+        }
       >
         <Text style={styles.sectionTitle}>Select timeslot</Text>
         <Text style={styles.sectionDescription}>
-          Lorem ipsum dolor sit amet consectetur adipiscin elit Ut et massa mi.
+          Pick a day with availability, then choose an online visit time. Times
+          are shown in your device timezone.
         </Text>
 
+        {!doctorUserId ? (
+          <Text style={styles.warnBanner}>
+            No clinician selected — go back and choose a doctor first.
+          </Text>
+        ) : null}
+
         {selectedDoctor ? (
-          <View style={styles.selectedDoctorCard}>
-            <Text style={styles.selectedDoctorLabel}>Selected doctor</Text>
-            <Text style={styles.selectedDoctorName}>{selectedDoctor.name}</Text>
-            <Text style={styles.selectedDoctorMeta}>{selectedDoctor.specialty}</Text>
+          <View style={styles.doctorCardWrap}>
+            <BookingFlowDoctorCard doctor={selectedDoctor} />
           </View>
         ) : null}
 
-        {/* Stripe calendar */}
+        {/* Calendar */}
         <View style={styles.calendarStrip}>
           <View style={styles.calendarHeader}>
             <TouchableOpacity onPress={handlePrevMonth} style={styles.calendarArrow} hitSlop={12}>
@@ -212,18 +363,36 @@ const BookApptSelectTimeslot: React.FC = () => {
             contentContainerStyle={styles.stripDaysContent}
           >
             {stripDays.map((day) => {
-              const selected = isSelected(day.date);
+              const selected = isSelectedDayCell(day.date);
+              const cellDate = new Date(year, month, day.date);
+              const hasSlots = daysWithSlots.has(localDayKey(cellDate));
               return (
                 <TouchableOpacity
                   key={`${year}-${month}-${day.date}`}
-                  style={[styles.dayCell, selected && styles.dayCellSelected]}
+                  style={[
+                    styles.dayCell,
+                    hasSlots ? styles.dayCellHasSlots : styles.dayCellNoSlots,
+                    selected && styles.dayCellSelected,
+                  ]}
                   onPress={() => onSelectDay(day.date)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.dayLabel, selected && styles.dayCellTextSelected]}>
+                  <Text
+                    style={[
+                      styles.dayLabel,
+                      hasSlots && !selected && styles.dayLabelOnAvailable,
+                      selected && styles.dayCellTextSelected,
+                    ]}
+                  >
                     {day.dayLabel}
                   </Text>
-                  <Text style={[styles.dayDate, selected && styles.dayCellTextSelected]}>
+                  <Text
+                    style={[
+                      styles.dayDate,
+                      hasSlots && !selected && styles.dayDateOnAvailable,
+                      selected && styles.dayCellTextSelected,
+                    ]}
+                  >
                     {day.date}
                   </Text>
                 </TouchableOpacity>
@@ -235,20 +404,48 @@ const BookApptSelectTimeslot: React.FC = () => {
         <Text style={styles.sectionTitle}>Select Time Slot</Text>
         <Text style={styles.selectedDateText}>{formatSelectedDate(selectedDate)}</Text>
 
-        {TIME_SLOTS.map((slot) => {
+        {showSlotsLoading ? (
+          <View style={styles.slotSkeletonList}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <View key={`slot-sk-${i}`} style={styles.slotSkeletonRow}>
+                <ShimmerBox width={22} height={22} borderRadius={6} />
+                <ShimmerBox height={14} borderRadius={6} style={{ flex: 1, marginLeft: 10 }} />
+                <ShimmerBox width={22} height={22} borderRadius={999} />
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {!showSlotsLoading && doctorUserId && slotsForSelectedDay.length === 0 ? (
+          <View style={styles.emptyState} accessibilityRole="none">
+            <View style={styles.emptyStateIconWrap}>
+              <Icons.CalendarClockIcon width={52} height={52} />
+            </View>
+            <Text style={styles.emptyStateTitle}>No times on this day</Text>
+            <Text style={styles.emptyStateBody}>
+              Swipe the dates above and choose a day with the blue-tinted
+              background — those days have at least one open slot.
+            </Text>
+          </View>
+        ) : null}
+
+        {slotsForSelectedDay.map((slot) => {
           const isSlotSelected = selectedSlotId === slot.id;
+          const label = formatSlotTimeRange(slot.startDate, slot.endDate);
           return (
             <TouchableOpacity
               key={slot.id}
               style={[styles.slotRow, isSlotSelected && styles.slotRowSelected]}
-              onPress={() => setSelectedSlotId((prev) => (prev === slot.id ? null : slot.id))}
+              onPress={() =>
+                setSelectedSlotId((prev) => (prev === slot.id ? null : slot.id))
+              }
               activeOpacity={0.8}
             >
               <View style={styles.slotLeft}>
                 <Icons.VideoCameraIcon width={22} height={22} />
                 <Text style={styles.slotOnline}>Online Appt.</Text>
               </View>
-              <Text style={styles.slotTime}>{slot.time}</Text>
+              <Text style={styles.slotTime}>{label}</Text>
               {isSlotSelected ? (
                 <Icons.RadioButtonCheckedIcon width={22} height={22} />
               ) : (
@@ -257,15 +454,18 @@ const BookApptSelectTimeslot: React.FC = () => {
             </TouchableOpacity>
           );
         })}
+      </ScrollView>
 
+      {selectedSlotId ? (
         <Animated.View
           style={[
-            styles.actionButtons,
+            styles.actionDock,
             {
-              opacity: buttonAnim,
+              paddingBottom: Math.max(insets.bottom, 12),
+              opacity: actionAnim,
               transform: [
                 {
-                  translateY: buttonAnim.interpolate({
+                  translateY: actionAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [20, 0],
                   }),
@@ -273,23 +473,23 @@ const BookApptSelectTimeslot: React.FC = () => {
               ],
             },
           ]}
-          pointerEvents={selectedSlotId ? 'auto' : 'none'}
+          pointerEvents="box-none"
         >
           <Button
             variant="primary"
-            title="Continue to Process"
+            title="Next"
             onPress={handleContinue}
-            style={styles.continueButtonPrimary}
+            style={styles.dockNextBtn}
           />
           <Button
             variant="half-outlined"
-            title="Cancel Process"
+            title="Cancel"
             onPress={handleCancelProcess}
-            style={styles.cancelButtonPrimary}
-            textStyle={styles.cancelButtonText}
+            style={styles.dockCancelBtn}
+            textStyle={styles.dockCancelText}
           />
         </Animated.View>
-      </ScrollView>
+      ) : null}
     </View>
   );
 };
@@ -303,12 +503,12 @@ const styles = StyleSheet.create({
     marginTop: -40,
     paddingHorizontal: CONTENT_PADDING,
     marginBottom: 16,
-    alignItems: 'center',
+    alignItems: 'stretch',
+    width: '100%',
   },
   progressCardShadowWrap: {
     width: '100%',
-    maxWidth: 340,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     borderRadius: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
@@ -327,6 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
+    overflow: 'hidden',
   },
   cardSubtitle: {
     fontFamily: Fonts.raleway,
@@ -358,10 +559,13 @@ const styles = StyleSheet.create({
     color: '#757575',
     marginLeft: 4,
   },
+  progressTrackInset: {
+    marginHorizontal: 10,
+  },
   progressBar: {
-    height: 5,
+    height: 7,
     backgroundColor: '#E5E7EB',
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: 'visible',
   },
   progressFill: {
@@ -370,7 +574,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: Colors.primary || '#2563EB',
-    borderRadius: 3,
+    borderRadius: 4,
   },
   progressDots: {
     position: 'absolute',
@@ -381,7 +585,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 6,
   },
   dot: {
     width: 5,
@@ -394,7 +598,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: CONTENT_PADDING,
-    paddingBottom: 120,
   },
   sectionTitle: {
     fontFamily: Fonts.raleway,
@@ -404,43 +607,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionDescription: {
-    fontFamily: Fonts.raleway,
+    fontFamily: Fonts.openSans,
     fontSize: 14,
     fontWeight: '400',
-    color: '#757575',
+    color: '#64748B',
     lineHeight: 20,
+    marginBottom: 16,
+  },
+  warnBanner: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    color: '#B45309',
+    marginBottom: 12,
+  },
+  doctorCardWrap: {
     marginBottom: 16,
   },
   calendarStrip: {
     marginBottom: 20,
-  },
-  selectedDoctorCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#ECF2FD',
-    padding: 12,
-    marginBottom: 16,
-  },
-  selectedDoctorLabel: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#475569',
-    marginBottom: 2,
-  },
-  selectedDoctorName: {
-    fontFamily: Fonts.raleway,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  selectedDoctorMeta: {
-    fontFamily: Fonts.openSans,
-    fontSize: 13,
-    fontWeight: '400',
-    color: Colors.primary,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -475,14 +659,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
   },
+  /** At least one bookable slot starts on this calendar day (local TZ). */
+  dayCellHasSlots: {
+    backgroundColor: '#DBEAFE',
+    borderColor: '#60A5FA',
+  },
+  dayCellNoSlots: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+    opacity: 0.72,
+  },
   dayCellSelected: {
-    borderColor: Colors.primary || '#2563EB',
+    borderColor: Colors.primary ?? '#2563EB',
     borderWidth: 2,
     backgroundColor: '#ECF2FD',
+    opacity: 1,
   },
   dayLabel: {
     fontFamily: Fonts.raleway,
@@ -491,14 +684,21 @@ const styles = StyleSheet.create({
     color: '#757575',
     marginBottom: 4,
   },
+  dayLabelOnAvailable: {
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
   dayDate: {
     fontFamily: Fonts.raleway,
     fontSize: 14,
     fontWeight: '700',
     color: '#1F2937',
   },
+  dayDateOnAvailable: {
+    color: '#1E40AF',
+  },
   dayCellTextSelected: {
-    color: Colors.primary || '#2563EB',
+    color: Colors.primary ?? '#2563EB',
   },
   selectedDateText: {
     fontFamily: Fonts.raleway,
@@ -506,6 +706,56 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#757575',
     marginBottom: 16,
+  },
+  slotSkeletonList: {
+    marginBottom: 12,
+    gap: 10,
+  },
+  slotSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 10,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  emptyStateIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyStateTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateBody: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 21,
+    textAlign: 'center',
+    maxWidth: 300,
   },
   slotRow: {
     flexDirection: 'row',
@@ -541,21 +791,32 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginRight: 12,
   },
-  actionButtons: {
-    marginTop: 24,
+  actionDock: {
+    paddingHorizontal: CONTENT_PADDING,
+    paddingTop: 12,
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  continueButtonPrimary: {
-    marginBottom: 12,
-    backgroundColor: Colors.primary || '#2563EB',
+  dockNextBtn: {
+    backgroundColor: Colors.primary ?? '#2563EB',
   },
-  cancelButtonPrimary: {
+  dockCancelBtn: {
     width: '100%',
     height: 52,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: '#F1F5F9',
     borderWidth: 0,
   },
-  cancelButtonText: {
+  dockCancelText: {
     color: '#1F2937',
+    fontFamily: Fonts.raleway,
+    fontWeight: '700',
   },
 });
 

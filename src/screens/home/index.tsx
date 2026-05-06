@@ -63,7 +63,10 @@ const Home: React.FC = () => {
   };
 
   const handleStartNow = () => {
-    (navigation.getParent() as any)?.getParent()?.navigate('ImmediateCareUrgentBooking');
+    (navigation.getParent() as any)?.getParent()?.navigate('BookApptBookingFlow', {
+      mode: 'see_doctor_now',
+      flowId: `${Date.now()}`,
+    });
   };
 
   const handleSetupForLater = () => {
@@ -78,13 +81,23 @@ const Home: React.FC = () => {
     setIsScrollingDown(false);
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    invalidatePatientAppointmentCaches(queryClient);
-    void queryClient.invalidateQueries({ queryKey: ['public-doctors'] });
-    setTimeout(() => {
+    try {
+      invalidatePatientAppointmentCaches(queryClient);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['public-doctors'] }),
+        queryClient.invalidateQueries({ queryKey: ['urgent-care-availability'] }),
+        queryClient.invalidateQueries({ queryKey: ['patient-subscription'] }),
+        queryClient.invalidateQueries({ queryKey: ['patient-me'] }),
+      ]);
+      // Force active queries used by child components to refetch immediately.
+      await queryClient.refetchQueries({
+        type: 'active',
+      });
+    } finally {
       setRefreshing(false);
-    }, 900);
+    }
   };
 
 

@@ -128,12 +128,14 @@ const BookApptSelectDoctor: React.FC = () => {
                 <Text style={styles.timeText}>10min</Text>
               </View>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${PROGRESS_PERCENT}%` }]} />
-              <View style={styles.progressDots}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <View key={i} style={styles.dot} />
-                ))}
+            <View style={styles.progressTrackInset}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${PROGRESS_PERCENT}%` }]} />
+                <View style={styles.progressDots}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <View key={i} style={styles.dot} />
+                  ))}
+                </View>
               </View>
             </View>
           </View>
@@ -308,12 +310,12 @@ const styles = StyleSheet.create({
     marginTop: -40,
     paddingHorizontal: CONTENT_PADDING,
     marginBottom: 16,
-    alignItems: 'center',
+    alignItems: 'stretch',
+    width: '100%',
   },
   progressCardShadowWrap: {
     width: '100%',
-    maxWidth: 340,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     borderRadius: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
@@ -332,6 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
+    overflow: 'hidden',
   },
   cardSubtitle: {
     fontFamily: Fonts.raleway,
@@ -363,10 +366,13 @@ const styles = StyleSheet.create({
     color: '#757575',
     marginLeft: 4,
   },
+  progressTrackInset: {
+    marginHorizontal: 10,
+  },
   progressBar: {
-    height: 5,
+    height: 7,
     backgroundColor: '#E5E7EB',
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: 'visible',
   },
   progressFill: {
@@ -375,7 +381,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: Colors.primary || '#2563EB',
-    borderRadius: 3,
+    borderRadius: 4,
   },
   progressDots: {
     position: 'absolute',
@@ -386,7 +392,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 6,
   },
   dot: {
     width: 5,

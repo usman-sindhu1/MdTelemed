@@ -176,9 +176,8 @@ export function mapPublicDoctorToBookingParams(
     years: formatPlatformTenure(p.user),
     patients: formatReviewsLine(p),
     fee: placeholderConsultationFee(),
-    imageUri:
-      imageUri ||
-      'https://via.placeholder.com/200x200/E2E8F0/64748B?text=Doctor',
+    // Leave blank when missing so UI can render initials avatar fallback.
+    imageUri: imageUri || '',
   };
 }
 

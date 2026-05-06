@@ -107,7 +107,18 @@ export function useHomeUpcomingAppointments() {
     if (!listQuery.isSuccess || slice.length === 0) {
       return [];
     }
-    const now = Date.now();
+    // Home shows "upcoming" for the current day as well (matches Appointments tab UX),
+    // so don't hide earlier times from today.
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
+    ).getTime();
     const out: HomeUpcomingAppointmentCard[] = [];
     for (let i = 0; i < slice.length; i++) {
       const item = slice[i];
@@ -116,7 +127,7 @@ export function useHomeUpcomingAppointments() {
       if (!start) {
         continue;
       }
-      if (new Date(start).getTime() < now) {
+      if (new Date(start).getTime() < startOfToday) {
         continue;
       }
       const { date, time } = formatSlot(start);

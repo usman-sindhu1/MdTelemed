@@ -48,6 +48,8 @@ type SignupRequestBody = {
   password: string;
   role?: string;
   timezone?: string;
+  acceptTermsOfService?: boolean;
+  acceptPrivacyPolicy?: boolean;
 };
 
 const SignUp: React.FC = () => {
@@ -182,6 +184,8 @@ const SignUp: React.FC = () => {
       password,
       role: 'PATIENT',
       timezone: getDeviceTimeZone(),
+      acceptTermsOfService: true,
+      acceptPrivacyPolicy: true,
     };
 
     onRequest({

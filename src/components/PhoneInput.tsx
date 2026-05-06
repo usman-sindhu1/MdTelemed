@@ -164,7 +164,13 @@ export const PhoneInput = forwardRef<PhoneNumberInput, PhoneInputProps>(
       <View style={containerStyle}>
         <PhoneNumberInput
           ref={phoneInputRef}
-          value={value}
+          /**
+           * `@perttu/react-native-phone-number-input` does not reliably update its internal
+           * `number` state when `value` changes (it only syncs on some prop changes).
+           * To keep this component controlled, we pass the value via `textInputProps.value`,
+           * which overrides the internal TextInput's value.
+           */
+          defaultValue={value}
           defaultCode={defaultCode}
           layout="first"
           onChangeText={handleChangeText}
@@ -188,6 +194,7 @@ export const PhoneInput = forwardRef<PhoneNumberInput, PhoneInputProps>(
             keyboardType: 'numeric',
             maxLength: 15,
             editable,
+            value,
           }}
           disableArrowIcon={!editable}
         />

@@ -1,29 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSelector } from 'react-redux';
 import Button from '../../../components/Button';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
 import { AppointmentsStackParamList } from '../../../navigation/HomeStack';
 import Icons from '../../../assets/svg';
+import { createAgoraToken } from '../../../api/agoraApi';
+import { showErrorToast } from '../../../utils/appToast';
+import type { RootState } from '../../../store';
 
 type JoinSessionNavigationProp = NativeStackNavigationProp<
   AppointmentsStackParamList,
   'JoinSession'
 >;
 
+type JoinSessionRouteProp = RouteProp<AppointmentsStackParamList, 'JoinSession'>;
+
 const JoinSession: React.FC = () => {
   const navigation = useNavigation<JoinSessionNavigationProp>();
-  const route = useRoute<any>();
+  const route = useRoute<JoinSessionRouteProp>();
   const insets = useSafeAreaInsets();
+  const [joining, setJoining] = useState(false);
+
+  const appointmentId = route.params?.appointmentId;
+  const appointmentCallType = route.params?.appointmentCallType ?? 'VIDEO';
+
+  const authUid = useSelector((s: RootState) => {
+    const u = s.auth.user;
+    const id = u && typeof u === 'object' && 'id' in u ? (u as any).id : '';
+    return String(id ?? '').trim();
+  });
+
+  const numericUid = (() => {
+    const n = Number.parseInt(authUid, 10);
+    if (Number.isFinite(n) && n > 0) return String(n);
+    // fallback: keep only digits (Agora uid must be numeric)
+    const digits = authUid.replace(/\D+/g, '');
+    return digits ? digits : undefined;
+  })();
 
   const handleBackPress = () => {
     const source = route.params?.source;
@@ -42,8 +67,48 @@ const JoinSession: React.FC = () => {
     console.log('Search pressed');
   };
 
-  const handleJoinSession = () => {
-    navigation.navigate('SessionJoined');
+  const handleJoinSession = async () => {
+    if (appointmentCallType === 'CHAT') {
+      navigation.navigate('AppointmentDetails', {
+        appointmentId,
+        initialTab: 'Messages',
+      });
+      return;
+    }
+    if (!appointmentId) {
+      Alert.alert('Missing appointment', 'Could not find appointment id.');
+      return;
+    }
+
+    try {
+      setJoining(true);
+      const tokenResp = await createAgoraToken({
+        appointmentId,
+        channelName: appointmentId,
+        uid: numericUid,
+        role: 'PUBLISHER',
+        expireSeconds: 3600,
+      });
+
+      if (!tokenResp?.token) {
+        throw new Error('Could not get Agora token');
+      }
+
+      navigation.navigate('SessionJoined', {
+        appointmentId,
+        appointmentCallType,
+        channelName: tokenResp.channelName ?? appointmentId,
+        uid: tokenResp.uid,
+        rtcToken: tokenResp.token,
+      });
+    } catch (e) {
+      showErrorToast(
+        'Could not join session',
+        (e as Error)?.message ?? 'Try again later.',
+      );
+    } finally {
+      setJoining(false);
+    }
   };
 
   return (
@@ -78,9 +143,13 @@ const JoinSession: React.FC = () => {
           <Text style={styles.title}>Join Session</Text>
 
           {/* Video Placeholder */}
-          <View style={styles.videoPlaceholder}>
-            {/* This will be replaced with actual video component */}
-          </View>
+          {appointmentCallType === 'VIDEO' ? (
+            <View style={styles.videoPlaceholder}>{/* video preview */}</View>
+          ) : appointmentCallType === 'AUDIO' ? (
+            <View style={styles.audioPlaceholder}>
+              <Icons.VideoCameraIcon width={28} height={28} />
+            </View>
+          ) : null}
 
           {/* Session Details */}
           <View style={styles.sessionDetails}>
@@ -93,8 +162,15 @@ const JoinSession: React.FC = () => {
           {/* Join Session Button */}
           <View style={styles.buttonContainer}>
             <Button
-              title="Join Session"
+              title={
+                appointmentCallType === 'CHAT'
+                  ? 'Open Chat'
+                  : appointmentCallType === 'AUDIO'
+                    ? 'Join Audio'
+                    : 'Join Video'
+              }
               onPress={handleJoinSession}
+              loading={joining}
               style={styles.joinButton}
               textStyle={styles.joinButtonText}
             />
@@ -162,6 +238,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     borderRadius: 12,
     marginTop: 8,
+  },
+  audioPlaceholder: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.9,
   },
   sessionDetails: {
     alignItems: 'center',

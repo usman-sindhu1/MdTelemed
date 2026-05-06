@@ -79,12 +79,14 @@ const ImmediateCareUrgentBooking: React.FC = () => {
                 <Text style={styles.timeText}>~2 min</Text>
               </View>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${PROGRESS_PERCENT}%` }]} />
-              <View style={styles.progressDots}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <View key={i} style={styles.dot} />
-                ))}
+            <View style={styles.progressTrackInset}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${PROGRESS_PERCENT}%` }]} />
+                <View style={styles.progressDots}>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <View key={i} style={styles.dot} />
+                  ))}
+                </View>
               </View>
             </View>
           </View>
@@ -165,11 +167,16 @@ const ImmediateCareUrgentBooking: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  progressCardWrap: { marginTop: -40, paddingHorizontal: CONTENT_PADDING, marginBottom: 16, alignItems: 'center' },
+  progressCardWrap: {
+    marginTop: -40,
+    paddingHorizontal: CONTENT_PADDING,
+    marginBottom: 16,
+    alignItems: 'stretch',
+    width: '100%',
+  },
   progressCardShadowWrap: {
     width: '100%',
-    maxWidth: 340,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     borderRadius: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
@@ -184,14 +191,15 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 4,
   },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, overflow: 'hidden' },
   cardSubtitle: { fontFamily: Fonts.raleway, fontSize: 12, fontWeight: '400', color: '#757575', marginBottom: 4 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   percentText: { fontFamily: Fonts.raleway, fontSize: 18, fontWeight: '700', color: Colors.primary },
   timeRow: { flexDirection: 'row', alignItems: 'center' },
   timeText: { fontFamily: Fonts.raleway, fontSize: 12, fontWeight: '500', color: '#757575', marginLeft: 4 },
-  progressBar: { height: 5, backgroundColor: '#E5E7EB', borderRadius: 3, overflow: 'visible' },
-  progressFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: Colors.primary, borderRadius: 3 },
+  progressTrackInset: { marginHorizontal: 10 },
+  progressBar: { height: 7, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'visible' },
+  progressFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: Colors.primary, borderRadius: 4 },
   progressDots: {
     position: 'absolute',
     left: 0,
@@ -201,7 +209,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 6,
   },
   dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: Colors.primary },
   scroll: { flex: 1 },

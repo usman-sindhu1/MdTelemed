@@ -39,11 +39,30 @@ export type HomeStackParamList = {
 
 export type AppointmentsStackParamList = {
   AppointmentsMain: undefined;
-  AppointmentDetails: { appointmentId?: string } | undefined;
+  AppointmentDetails:
+    | {
+        appointmentId?: string;
+        initialTab?: 'Appointment Info' | 'Doctor Info' | 'Prescriptions' | 'Messages';
+      }
+    | undefined;
   PrescriptionDetails: { prescriptionId: string };
-  JoinSession: undefined;
-  SessionJoined: undefined;
-  InSessionChat: undefined;
+  JoinSession:
+    | {
+        appointmentId?: string;
+        appointmentCallType?: 'CHAT' | 'AUDIO' | 'VIDEO';
+        source?: 'immediateCare';
+      }
+    | undefined;
+  SessionJoined:
+    | {
+        appointmentId?: string;
+        appointmentCallType?: 'AUDIO' | 'VIDEO';
+        channelName?: string;
+        uid?: string;
+        rtcToken?: string;
+      }
+    | undefined;
+  InSessionChat: { appointmentId?: string } | undefined;
   ReviewsScreen: undefined;
   SelectService: undefined;
   SelectDoctor: undefined;

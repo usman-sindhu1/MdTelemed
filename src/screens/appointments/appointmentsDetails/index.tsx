@@ -70,7 +70,10 @@ const AppointmentDetails: React.FC = () => {
   const appointmentId = route.params?.appointmentId;
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<MainTabType>('Appointment Info');
+  const [activeTab, setActiveTab] = useState<MainTabType>(() => {
+    const initial = route.params?.initialTab;
+    return initial ?? 'Appointment Info';
+  });
   const [reviewOpen, setReviewOpen] = useState(false);
   const [pdfWorking, setPdfWorking] = useState(false);
   const tabsScrollViewRef = useRef<ScrollView>(null);
@@ -164,8 +167,23 @@ const AppointmentDetails: React.FC = () => {
     navigation.goBack();
   };
 
+  const normalizedCallType = useMemo(() => {
+    const raw =
+      detail?.appointment?.appointmentCallType ?? detail?.appointment?.callType;
+    const t = String(raw ?? '').trim().toUpperCase();
+    if (t === 'CHAT' || t === 'AUDIO' || t === 'VIDEO') return t;
+    return 'VIDEO';
+  }, [detail?.appointment?.appointmentCallType, detail?.appointment?.callType]);
+
   const handleJoinSession = () => {
-    navigation.navigate('JoinSession');
+    if (normalizedCallType === 'CHAT') {
+      setActiveTab('Messages');
+      return;
+    }
+    navigation.navigate('JoinSession', {
+      appointmentId,
+      appointmentCallType: normalizedCallType,
+    });
   };
 
   const handleDownloadPdf = useCallback(async () => {
@@ -331,11 +349,21 @@ const AppointmentDetails: React.FC = () => {
           onPress={handleJoinSession}
           activeOpacity={0.85}
         >
-          <Text style={styles.actionPrimaryText}>Join Appointment</Text>
+          <Text style={styles.actionPrimaryText}>
+            {normalizedCallType === 'CHAT' ? 'Open Chat' : 'Join Appointment'}
+          </Text>
         </TouchableOpacity>
       </View>
     ),
-    [canLeaveReview, detail, hasRating, handleDownloadPdf, insets.bottom, pdfWorking],
+    [
+      canLeaveReview,
+      detail,
+      hasRating,
+      handleDownloadPdf,
+      insets.bottom,
+      normalizedCallType,
+      pdfWorking,
+    ],
   );
 
   return (

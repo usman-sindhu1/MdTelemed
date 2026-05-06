@@ -12,6 +12,7 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import ShimmerBox from '../common/ShimmerBox';
+import InitialsAvatar from '../common/InitialsAvatar';
 import { useHomeUpcomingAppointments } from '../../hooks/useHomeUpcomingAppointments';
 
 const SKELETON_CARDS = 2;
@@ -41,19 +42,24 @@ const UpcommingAppointments: React.FC = () => {
         >
           {Array.from({ length: SKELETON_CARDS }).map((_, i) => (
             <View key={`sk-${i}`} style={styles.card}>
-              <View style={styles.topRow}>
-                <ShimmerBox width={84} height={84} borderRadius={20} />
-                <View style={styles.shimmerTextCol}>
+              <View style={styles.cardRow}>
+                <ShimmerBox width="30%" height={156} borderRadius={0} />
+                <View style={styles.cardRight}>
                   <ShimmerBox height={18} borderRadius={8} />
-                  <ShimmerBox height={14} borderRadius={6} width="70%" />
+                  <ShimmerBox
+                    height={14}
+                    borderRadius={6}
+                    width="70%"
+                    style={{ marginTop: 8 }}
+                  />
+                  <View style={styles.metaRow}>
+                    <View style={styles.datetimeWrap}>
+                      <ShimmerBox width={72} height={14} borderRadius={6} />
+                      <ShimmerBox width={72} height={14} borderRadius={6} />
+                    </View>
+                    <ShimmerBox width={88} height={32} borderRadius={999} />
+                  </View>
                 </View>
-              </View>
-              <View style={styles.bottomRow}>
-                <View style={styles.datetimeWrap}>
-                  <ShimmerBox width={72} height={14} borderRadius={6} />
-                  <ShimmerBox width={72} height={14} borderRadius={6} />
-                </View>
-                <ShimmerBox width={88} height={36} borderRadius={999} />
               </View>
             </View>
           ))}
@@ -90,44 +96,48 @@ const UpcommingAppointments: React.FC = () => {
         >
           {cards.map((appointment) => (
             <View key={appointment.id} style={styles.card}>
-              <View style={styles.topRow}>
+              <View style={styles.cardRow}>
                 <View style={styles.imageShell}>
-                  {appointment.doctorImageUri ? (
-                    <Image
-                      source={{ uri: appointment.doctorImageUri }}
-                      style={styles.profileImage}
-                    />
-                  ) : (
-                    <View style={styles.placeholderImage} />
-                  )}
+                  <InitialsAvatar
+                    uri={appointment.doctorImageUri}
+                    name={appointment.doctorName}
+                    size={156}
+                    borderRadius={0}
+                    variant="first-letter"
+                  />
                 </View>
-                <View style={styles.doctorTextWrap}>
-                  <Text style={styles.doctorName} numberOfLines={1}>
-                    {appointment.doctorName}
-                  </Text>
+
+                <View style={styles.cardRight}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.doctorName} numberOfLines={1}>
+                      {appointment.doctorName}
+                    </Text>
+                    <View style={styles.statusPill}>
+                      <Text style={styles.statusText}>
+                        {appointment.badgeLabel}
+                      </Text>
+                    </View>
+                  </View>
                   <Text style={styles.specialty} numberOfLines={1}>
                     {appointment.specialty}
                   </Text>
-                </View>
-              </View>
 
-              <View style={styles.bottomRow}>
-                <View style={styles.datetimeWrap}>
-                  <View style={styles.detailItem}>
-                    <Icons.CalendarTodayIcon width={20} height={20} />
-                    <Text style={styles.detailText} numberOfLines={1}>
-                      {appointment.date}
-                    </Text>
+                  <View style={styles.metaRow}>
+                    <View style={styles.datetimeWrap}>
+                      <View style={styles.detailItem}>
+                        <Icons.CalendarTodayIcon width={18} height={18} />
+                        <Text style={styles.detailText} numberOfLines={1}>
+                          {appointment.date}
+                        </Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Icons.NestClockFarsightAnalogIcon width={18} height={18} />
+                        <Text style={styles.detailText} numberOfLines={1}>
+                          {appointment.time}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.detailItem}>
-                    <Icons.NestClockFarsightAnalogIcon width={20} height={20} />
-                    <Text style={styles.detailText} numberOfLines={1}>
-                      {appointment.time}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>{appointment.badgeLabel}</Text>
                 </View>
               </View>
             </View>
@@ -170,8 +180,33 @@ const styles = StyleSheet.create({
     width: 350,
     backgroundColor: '#EEEFF3',
     borderRadius: 28,
+    padding: 0,
+    height: 156,
+    overflow: 'hidden',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    height: '100%',
+  },
+  cardRight: {
+    flex: 1,
+    minWidth: 0,
     padding: 16,
-    minHeight: 156,
+    justifyContent: 'flex-start',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 'auto',
+    gap: 10,
   },
   shimmerTextCol: {
     flex: 1,
@@ -186,11 +221,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   imageShell: {
-    width: 84,
-    height: 84,
-    borderRadius: 20,
+    width: '30%',
+    minWidth: 110,
+    height: '100%',
     overflow: 'hidden',
-    marginRight: 14,
     backgroundColor: '#DDE3EA',
   },
   profileImage: {
@@ -214,6 +248,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: 2,
+    flex: 1,
+    minWidth: 0,
   },
   specialty: {
     fontFamily: Fonts.openSans,
@@ -270,9 +306,9 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     paddingVertical: 20,
     paddingHorizontal: 16,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'center',
+    gap: 10,
   },
   emptyIconWrap: {
     width: 56,
@@ -283,8 +319,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTextCol: {
-    flex: 1,
     minWidth: 0,
+    alignItems: 'center',
   },
   emptyTitle: {
     fontFamily: Fonts.raleway,
@@ -292,6 +328,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontFamily: Fonts.openSans,
@@ -299,6 +336,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
     lineHeight: 20,
+    textAlign: 'center',
   },
 });
 

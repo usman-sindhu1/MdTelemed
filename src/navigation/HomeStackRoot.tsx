@@ -28,6 +28,21 @@ import BookApptPaymentInfo from '../screens/BookApptPaymentInfo';
 import ImmediateCareUrgentBooking from '../screens/ImmediateCareUrgentBooking';
 import ImmediateCareAutoAssign from '../screens/ImmediateCareAutoAssign';
 import ImmediateCarePriorityConfirm from '../screens/ImmediateCarePriorityConfirm';
+import BookApptDoctorDetail from '../screens/BookApptDoctorDetail';
+import BookApptBookingFlow from '../screens/BookApptBookingFlow';
+import StripeCheckout from '../screens/StripeCheckout';
+
+/** Shared doctor chip for booking stack (static + future API). */
+export type BookingDoctorParams = {
+  id: string | number;
+  name: string;
+  specialty: string;
+  rating: string;
+  years: string;
+  patients: string;
+  fee: string;
+  imageUri: string;
+};
 
 export type DrawerParamList = {
   MainTabs: undefined;
@@ -40,16 +55,7 @@ export type DrawerParamList = {
   Doctors: undefined;
   DoctorDetails:
     | {
-        selectedDoctor?: {
-          id: string | number;
-          name: string;
-          specialty: string;
-          rating: string;
-          years: string;
-          patients: string;
-          fee: string;
-          imageUri: string;
-        };
+        selectedDoctor?: BookingDoctorParams;
       }
     | undefined;
   ContactUs: undefined;
@@ -61,37 +67,40 @@ export type DrawerParamList = {
   Language: undefined;
   BookAppt:
     | {
+        /** @deprecated Categories removed — kept for old deep links only. */
         preselectedCategoryId?: string;
-        selectedDoctor?: {
-          id: string | number;
-          name: string;
-          specialty: string;
-          rating: string;
-          years: string;
-          patients: string;
-          fee: string;
-          imageUri: string;
-        };
+        selectedDoctor?: BookingDoctorParams;
       }
     | undefined;
+  BookApptDoctorDetail: {
+    selectedDoctor: BookingDoctorParams;
+  };
   BookApptSelectDoctor:
     | {
-        selectedDoctor?: {
-          id: string | number;
-          name: string;
-          specialty: string;
-          rating: string;
-          years: string;
-          patients: string;
-          fee: string;
-          imageUri: string;
-        };
+        selectedDoctor?: BookingDoctorParams;
         preselectedCategoryId?: string;
       }
     | undefined;
-  BookApptSelectTimeslot: undefined;
+  BookApptSelectTimeslot:
+    | {
+        selectedDoctor?: BookingDoctorParams;
+        source?: string;
+        bookingMode?: 'later' | 'see_doctor_now';
+      }
+    | undefined;
+  BookApptBookingFlow:
+    | {
+        mode: 'book_later' | 'see_doctor_now';
+        selectedDoctor?: BookingDoctorParams;
+        /** Book Later — required by API together with doctor; from timeslot picker. */
+        timeSlotId?: string;
+        /** Unique id for each booking attempt to reset form state. */
+        flowId?: string;
+      }
+    | undefined;
   BookApptPatientSummary: undefined;
   BookApptPaymentInfo: undefined;
+  StripeCheckout: { checkoutUrl: string };
   ImmediateCareUrgentBooking: undefined;
   ImmediateCareAutoAssign: undefined;
   ImmediateCarePriorityConfirm: undefined;
@@ -117,6 +126,7 @@ const HomeStackRoot = () => {
           {(props) => (
             <Drawer.Navigator
               drawerContent={(drawerProps) => <CustomDrawer {...drawerProps} />}
+              detachInactiveScreens={false}
               screenOptions={{
                 headerShown: false,
                 drawerType: 'slide',
@@ -130,8 +140,11 @@ const HomeStackRoot = () => {
             >
               <Drawer.Screen name="MainTabs" component={BottomTabNavigator} />
               <Drawer.Screen name="BookAppt" component={BookAppt} />
+              <Drawer.Screen name="BookApptDoctorDetail" component={BookApptDoctorDetail} />
               <Drawer.Screen name="BookApptSelectDoctor" component={BookApptSelectDoctor} />
               <Drawer.Screen name="BookApptSelectTimeslot" component={BookApptSelectTimeslot} />
+              <Drawer.Screen name="BookApptBookingFlow" component={BookApptBookingFlow} />
+              <Drawer.Screen name="StripeCheckout" component={StripeCheckout} />
               <Drawer.Screen name="BookApptPatientSummary" component={BookApptPatientSummary} />
               <Drawer.Screen name="BookApptPaymentInfo" component={BookApptPaymentInfo} />
               <Drawer.Screen name="ImmediateCareUrgentBooking" component={ImmediateCareUrgentBooking} />

@@ -7,7 +7,9 @@ export const publicPaths = {
   doctorById: (doctorUserId: string) =>
     `${PUBLIC_API_PREFIX}/doctors/${encodeURIComponent(doctorUserId)}`,
   doctorTimeslots: (doctorUserId: string) =>
-    `${PUBLIC_API_PREFIX}/doctors/${encodeURIComponent(doctorUserId)}/time-slots`,
+    `${PUBLIC_API_PREFIX}/doctors/${encodeURIComponent(doctorUserId)}/timeslots`,
   /** Contact form — POST JSON, no `Authorization`. */
   userQueries: '/api/user-queries',
+  /** GET — optional pre-check before “See Doctor Now”; `data.hasAvailability`. */
+  urgentCareAvailability: `${PUBLIC_API_PREFIX}/urgent-care/availability`,
 };

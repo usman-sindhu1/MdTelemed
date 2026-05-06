@@ -278,11 +278,15 @@ const Prescription: React.FC = () => {
       );
     }
     if (listQuery.isError) {
+      const msg =
+        (listQuery.error as Error)?.message ?? 'Could not load prescriptions.';
       return (
         <View style={styles.centerBox}>
-          <Text style={styles.errorText}>
-            {(listQuery.error as Error)?.message ?? 'Could not load prescriptions.'}
-          </Text>
+          <View style={styles.emptyIconWrap}>
+            <Icons.Report width={30} height={30} />
+          </View>
+          <Text style={styles.emptyTitle}>Could not load prescriptions</Text>
+          <Text style={styles.errorText}>{msg}</Text>
           <TouchableOpacity
             style={styles.retryBtn}
             onPress={() => listQuery.refetch()}
@@ -294,6 +298,9 @@ const Prescription: React.FC = () => {
     }
     return (
       <View style={styles.centerBox}>
+        <View style={styles.emptyIconWrap}>
+          <Icons.Report width={30} height={30} />
+        </View>
         <Text style={styles.emptyTitle}>No prescriptions yet</Text>
         <Text style={styles.emptySub}>
           When your doctor issues a prescription, it will appear here.
@@ -395,6 +402,16 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     paddingHorizontal: 24,
     alignItems: 'center',
+    gap: 10,
+  },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   errorText: {
     fontFamily: Fonts.openSans,
@@ -421,6 +438,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySub: {
     fontFamily: Fonts.openSans,

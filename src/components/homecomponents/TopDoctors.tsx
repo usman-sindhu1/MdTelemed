@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
+import Icons from '../../assets/svg';
 import type { HomeStackParamList } from '../../navigation/HomeStack';
 import { usePublicTopDoctors } from '../../hooks/usePublicTopDoctors';
 import { publicGetData } from '../../api/publicHttp';
@@ -75,11 +76,25 @@ const TopDoctors: React.FC = () => {
           ))}
         </View>
       ) : q.isError ? (
-        <Text style={styles.muted}>
-          Could not load doctors. Pull to refresh on Home or try again later.
-        </Text>
+        <View style={styles.centerMsg}>
+          <View style={styles.centerIcon}>
+            <Icons.Doctor1Icon width={28} height={28} />
+          </View>
+          <Text style={styles.centerTitle}>Could not load doctors</Text>
+          <Text style={styles.centerBody}>
+            Pull to refresh on Home or try again later.
+          </Text>
+        </View>
       ) : list.length === 0 ? (
-        <Text style={styles.muted}>No doctors available yet.</Text>
+        <View style={styles.centerMsg}>
+          <View style={styles.centerIcon}>
+            <Icons.Doctor1Icon width={28} height={28} />
+          </View>
+          <Text style={styles.centerTitle}>No doctors available yet</Text>
+          <Text style={styles.centerBody}>
+            Check back soon — we’ll show top clinicians here.
+          </Text>
+        </View>
       ) : (
         <View style={styles.cardsWrap}>
           {list.map((profile, index) => {
@@ -138,6 +153,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     lineHeight: 20,
+  },
+  centerMsg: {
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  centerIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  centerBody: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 19,
   },
 });
 

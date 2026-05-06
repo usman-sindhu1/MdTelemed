@@ -8,6 +8,9 @@ export const patientPaths = {
     `${PATIENT_API_PREFIX}/appointments/${encodeURIComponent(id)}`,
   therapistById: (doctorId: string) =>
     `${PATIENT_API_PREFIX}/therapists/${encodeURIComponent(doctorId)}`,
+  /** Future bookable slots for scheduling (same filter as public timeslots). */
+  therapistSlots: (doctorId: string) =>
+    `${PATIENT_API_PREFIX}/therapists/${encodeURIComponent(doctorId)}/slots`,
   reviews: `${PATIENT_API_PREFIX}/reviews`,
   ratingById: (ratingId: string) =>
     `${PATIENT_API_PREFIX}/ratings/${encodeURIComponent(ratingId)}`,
@@ -18,6 +21,7 @@ export const patientPaths = {
   paymentById: (id: string) =>
     `${PATIENT_API_PREFIX}/payments/${encodeURIComponent(id)}`,
   medicalHistory: `${PATIENT_API_PREFIX}/medical-history`,
+  subscription: `${PATIENT_API_PREFIX}/subscription`,
 };
 
 export const filesPaths = {

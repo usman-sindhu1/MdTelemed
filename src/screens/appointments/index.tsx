@@ -24,6 +24,7 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import ShimmerBox from '../../components/common/ShimmerBox';
+import InitialsAvatar from '../../components/common/InitialsAvatar';
 import { useScrollContext } from '../../contexts/ScrollContext';
 import { invalidatePatientAppointmentCaches } from '../../hooks/useHomeUpcomingAppointments';
 import {
@@ -193,44 +194,46 @@ const Appointments: React.FC = () => {
         onPress={() => handleCardPress(item.id)}
         activeOpacity={0.7}
       >
-        <View style={styles.topRow}>
+        <View style={styles.cardRow}>
           <View style={styles.imageShell}>
-            {item.doctorImageUri ? (
-              <Image
-                source={{ uri: item.doctorImageUri }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.placeholderImage} />
-            )}
+            <InitialsAvatar
+              uri={item.doctorImageUri}
+              name={item.doctorName}
+              size={152}
+              borderRadius={0}
+              variant="first-letter"
+            />
           </View>
-          <View style={styles.doctorTextWrap}>
-            <Text style={styles.doctorName} numberOfLines={1}>
-              {item.doctorName}
-            </Text>
+
+          <View style={styles.cardRight}>
+            <View style={styles.nameRow}>
+              <Text style={styles.doctorName} numberOfLines={1}>
+                {item.doctorName}
+              </Text>
+              <View style={[styles.statusPill, badgeToneToStyle(item.badgeTone)]}>
+                <Text style={styles.statusText}>{item.badgeLabel}</Text>
+              </View>
+            </View>
             <Text style={styles.specialty} numberOfLines={1}>
               {item.specialty}
             </Text>
-          </View>
-        </View>
 
-        <View style={styles.bottomRow}>
-          <View style={styles.datetimeWrap}>
-            <View style={styles.detailItem}>
-              <Icons.CalendarTodayIcon width={20} height={20} />
-              <Text style={styles.detailText} numberOfLines={1}>
-                {item.date}
-              </Text>
+            <View style={styles.metaRow}>
+              <View style={styles.datetimeWrap}>
+                <View style={styles.detailItem}>
+                  <Icons.CalendarTodayIcon width={18} height={18} />
+                  <Text style={styles.detailText} numberOfLines={1}>
+                    {item.date}
+                  </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Icons.NestClockFarsightAnalogIcon width={18} height={18} />
+                  <Text style={styles.detailText} numberOfLines={1}>
+                    {item.time}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.detailItem}>
-              <Icons.NestClockFarsightAnalogIcon width={20} height={20} />
-              <Text style={styles.detailText} numberOfLines={1}>
-                {item.time}
-              </Text>
-            </View>
-          </View>
-          <View style={[styles.statusPill, badgeToneToStyle(item.badgeTone)]}>
-            <Text style={styles.statusText}>{item.badgeLabel}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -317,19 +320,19 @@ const Appointments: React.FC = () => {
             <View style={styles.shimmerBlock}>
               {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
                 <View key={`sk-${i}`} style={styles.card}>
-                  <View style={styles.topRow}>
-                    <ShimmerBox width={84} height={84} borderRadius={20} />
-                    <View style={styles.shimmerTextCol}>
+                  <View style={styles.cardRow}>
+                    <ShimmerBox width="30%" height={152} borderRadius={0} />
+                    <View style={styles.cardRight}>
                       <ShimmerBox height={18} borderRadius={8} />
-                      <ShimmerBox height={14} borderRadius={6} width="70%" />
+                      <ShimmerBox height={14} borderRadius={6} width="70%" style={{ marginTop: 8 }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, gap: 10 }}>
+                        <View style={{ flexDirection: 'row', gap: 14, flex: 1 }}>
+                          <ShimmerBox width={80} height={14} borderRadius={6} />
+                          <ShimmerBox width={80} height={14} borderRadius={6} />
+                        </View>
+                        <ShimmerBox width={88} height={32} borderRadius={999} />
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.bottomRow}>
-                    <View style={styles.datetimeWrap}>
-                      <ShimmerBox width={80} height={14} borderRadius={6} />
-                      <ShimmerBox width={80} height={14} borderRadius={6} />
-                    </View>
-                    <ShimmerBox width={88} height={36} borderRadius={999} />
                   </View>
                 </View>
               ))}
@@ -459,6 +462,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
     overflow: 'hidden',
     marginBottom: 0,
+    // Header should span full width even when list content is padded.
+    marginHorizontal: -15,
   },
   scrollContent: {
     flexGrow: 1,
@@ -538,22 +543,22 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#EEEFF3',
     borderRadius: 24,
-    padding: 16,
+    padding: 0,
     width: '100%',
-    minHeight: 152,
+    height: 152,
     marginBottom: 16,
+    overflow: 'hidden',
   },
-  topRow: {
+  cardRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
+    alignItems: 'stretch',
+    height: '100%',
   },
   imageShell: {
-    width: 84,
-    height: 84,
-    borderRadius: 20,
+    width: '30%',
+    minWidth: 110,
+    height: '100%',
     overflow: 'hidden',
-    marginRight: 14,
     backgroundColor: '#DDE3EA',
   },
   profileImage: {
@@ -566,6 +571,18 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: Colors.primaryLight,
   },
+  cardRight: {
+    flex: 1,
+    minWidth: 0,
+    padding: 16,
+    justifyContent: 'flex-start',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   doctorTextWrap: {
     flex: 1,
     minWidth: 0,
@@ -577,6 +594,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: 2,
+    flex: 1,
+    minWidth: 0,
   },
   specialty: {
     fontFamily: Fonts.openSans,
@@ -584,17 +603,17 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
   },
-  bottomRow: {
+  metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginTop: 'auto',
+    gap: 10,
   },
   datetimeWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    rowGap: 8,
-    columnGap: 14,
+    gap: 14,
     flex: 1,
     minWidth: 0,
   },
@@ -602,8 +621,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    marginLeft: 10,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   statusUpcoming: {
     backgroundColor: Colors.primary,
@@ -632,7 +650,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     minWidth: 0,
-    maxWidth: '48%',
+    maxWidth: '52%',
   },
   detailText: {
     fontFamily: Fonts.openSans,

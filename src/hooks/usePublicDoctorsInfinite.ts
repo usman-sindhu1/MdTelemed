@@ -34,6 +34,9 @@ export function usePublicDoctorsInfinite(search: string) {
       if (items.length < PAGE_SIZE) return undefined;
       return allPages.length + 1;
     },
-    staleTime: 30_000,
+    // Keep cached results when revisiting the screen.
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
