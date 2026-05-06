@@ -1,6 +1,11 @@
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings") }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+  // Avoid spawning `npx` (can be OOM-killed during Gradle settings evaluation).
+  // Run the local React Native CLI with an explicit Node heap instead.
+  def rnCli = file("../node_modules/.bin/react-native").absolutePath
+  ex.autolinkLibrariesFromCommand(["node", "--max_old_space_size=4096", rnCli, "config"])
+}
 rootProject.name = 'MdTelemed'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
