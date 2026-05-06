@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,11 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerActions } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+import Video from 'react-native-video';
 import HomeHeader from '../../components/common/HomeHeader';
 import UpcommingAppointments from '../../components/homecomponents/UpcommingAppointments';
 import TopDoctors from '../../components/homecomponents/TopDoctors';
@@ -19,18 +21,71 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { useScrollContext } from '../../contexts/ScrollContext';
 import { invalidatePatientAppointmentCaches } from '../../hooks/useHomeUpcomingAppointments';
+import type { RootState } from '../../store';
+import { getData, storeData } from '../../utils/storage';
+import { getUserEmail } from '../../utils/profileDisplay';
 
 const Home: React.FC = () => {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { setIsScrollingDown } = useScrollContext();
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  const authUser = useSelector(
+    (s: RootState) => s.auth.user,
+  ) as Record<string, unknown> | null;
+
+  const [showIntroVideo, setShowIntroVideo] = useState(false);
+  const [introMuted, setIntroMuted] = useState(false);
+
+  const introVideoUri = useMemo(
+    () => 'asset:/video/WhatsApp%20Video%202026-05-05%20at%2012.33.27.mp4',
+    [],
+  );
+
+  const introSeenKey = useMemo(() => {
+    const email = getUserEmail(authUser).trim().toLowerCase();
+    // If email is unknown, we still gate with a device-level key.
+    return `introVideoSeen:${email || 'device'}`;
+  }, [authUser]);
 
   useEffect(() => {
     return () => {
       setIsScrollingDown(false);
     };
   }, [setIsScrollingDown]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkIntro() {
+      // Only when logged in
+      if (!authUser) {
+        setShowIntroVideo(false);
+        return;
+      }
+      const seen = await getData<boolean>(introSeenKey);
+      if (cancelled) return;
+      if (seen === true) return;
+      setShowIntroVideo(true);
+    }
+
+    checkIntro();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, introSeenKey]);
+
+  const closeIntroVideo = async () => {
+    setShowIntroVideo(false);
+    try {
+      await storeData(introSeenKey, true);
+    } catch {
+      // If storage fails, we still allow closing.
+    }
+  };
 
   const handleProfilePress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
@@ -103,6 +158,37 @@ const Home: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {showIntroVideo ? (
+        <View style={styles.introOverlay}>
+          <Video
+            source={{ uri: introVideoUri }}
+            style={styles.introVideo}
+            resizeMode="cover"
+            controls={false}
+            muted={introMuted}
+            volume={1.0}
+            paused={false}
+            onEnd={closeIntroVideo}
+            onError={() => {
+              closeIntroVideo();
+            }}
+          />
+          <TouchableOpacity
+            style={[styles.skipBtn, { top: insets.top + 12 }]}
+            activeOpacity={0.85}
+            onPress={closeIntroVideo}
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.introVolumeBtn, { top: insets.top + 12 }]}
+            activeOpacity={0.85}
+            onPress={() => setIntroMuted((v) => !v)}
+          >
+            <Text style={styles.skipText}>{introMuted ? '🔇' : '🔊'}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -198,6 +284,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  introOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+    backgroundColor: '#000',
+  },
+  introVideo: {
+    width: '100%',
+    height: '100%',
+  },
+  skipBtn: {
+    position: 'absolute',
+    right: 14,
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introVolumeBtn: {
+    position: 'absolute',
+    left: 14,
+    width: 52,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   headerContainer: {
     backgroundColor: '#ECF2FD',

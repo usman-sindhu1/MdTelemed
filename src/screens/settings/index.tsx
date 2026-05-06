@@ -21,6 +21,7 @@ import { logout } from '../../store/slices/authSlice';
 import { clearAuthSession } from '../../utils/authSession';
 import { getUserAvatarUri, getUserDisplayName, getUserEmail } from '../../utils/profileDisplay';
 import { usePatientMe } from '../../hooks/usePatientMe';
+import { Svg, Path } from 'react-native-svg';
 
 type Row = {
   title: string;
@@ -94,6 +95,29 @@ const SettingsScreen: React.FC = () => {
           subtitle: 'Update your password',
           icon: <Icons.PasswordIcon width={20} height={20} />,
           onPress: () => navigateDrawerScreen('ChangePassword'),
+        },
+      ],
+    },
+    {
+      title: 'Media',
+      rows: [
+        {
+          title: 'Videos',
+          subtitle: 'Watch videos in the app',
+          icon: (
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M10 8.5v7l6-3.5-6-3.5Z"
+                fill={Colors.textSecondary}
+              />
+              <Path
+                d="M4.5 6.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-11a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"
+                stroke={Colors.textSecondary}
+                strokeWidth="1.6"
+              />
+            </Svg>
+          ),
+          onPress: () => navigation.navigate('SettingsVideo'),
         },
       ],
     },

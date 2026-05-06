@@ -25,6 +25,7 @@ import Notifications from '../screens/notifications';
 import Chat from '../screens/chat';
 import InboxChat from '../screens/chat/InboxChat';
 import SettingsScreen from '../screens/settings';
+import VideoScreen from '../screens/settings/VideoScreen';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
@@ -192,6 +193,7 @@ export const SettingsStack = () => {
       }}
     >
       <SettingsStackNavigator.Screen name="SettingsMain" component={SettingsScreen} />
+      <SettingsStackNavigator.Screen name="SettingsVideo" component={VideoScreen} />
     </SettingsStackNavigator.Navigator>
   );
 };
