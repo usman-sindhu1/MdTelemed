@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getData } from './storage';
 import { API_URL } from '../constants/BaseUrl';
 import { filesPaths } from '../constants/patientPaths';
+import { S3_SSE_PUT_HEADERS } from '../lib/s3-upload-headers';
 
 export type UploadUrlResponse = {
   uploadUrl: string;
@@ -27,6 +28,7 @@ function putFileToPresignedUrl(
   uploadUrl: string,
   contentType: string,
   fileName: string,
+  contentLengthBytes: number,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -50,7 +52,9 @@ function putFileToPresignedUrl(
       );
     };
     xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('x-amz-server-side-encryption', S3_SSE_PUT_HEADERS['x-amz-server-side-encryption']);
     xhr.setRequestHeader('Content-Type', contentType);
+    xhr.setRequestHeader('Content-Length', String(contentLengthBytes));
     // React Native: send local file without reading via fetch(blob)
     xhr.send({
       uri: localUri,
@@ -66,8 +70,19 @@ function putFileToPresignedUrl(
 export async function uploadLocalProfileImage(
   localUri: string,
   mimeType?: string,
+  sizeBytes?: number,
 ): Promise<string> {
-  const fileType = mimeType ?? guessMimeType(localUri);
+  if (!Number.isFinite(sizeBytes) || (sizeBytes ?? 0) <= 0) {
+    throw new Error('Invalid image size. Please pick the image again.');
+  }
+  if ((sizeBytes ?? 0) > 25 * 1024 * 1024) {
+    throw new Error('This image is too large. Maximum upload size is 25 MB.');
+  }
+
+  const rawType = mimeType ?? guessMimeType(localUri);
+  // Some backends reject HEIC/HEIF for presigned uploads. Try requesting a JPEG slot.
+  const fileType =
+    rawType === 'image/heic' || rawType === 'image/heif' ? 'image/jpeg' : rawType;
   const ext =
     fileType === 'image/png'
       ? 'png'
@@ -83,9 +98,15 @@ export async function uploadLocalProfileImage(
 
   let data: UploadUrlResponse | undefined;
   try {
+    const payload: Record<string, unknown> = {
+      fileName,
+      // Send a few common keys to satisfy different backend validators.
+      fileType,
+      fileSizeBytes: sizeBytes,
+    };
     const res = await axios.post<{ data?: UploadUrlResponse; message?: string }>(
       `${API_URL}${filesPaths.uploadUrl}`,
-      { fileName, fileType },
+      payload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -114,7 +135,13 @@ export async function uploadLocalProfileImage(
     throw e;
   }
 
-  await putFileToPresignedUrl(localUri, data.uploadUrl, fileType, fileName);
+  await putFileToPresignedUrl(
+    localUri,
+    data.uploadUrl,
+    fileType,
+    fileName,
+    sizeBytes as number,
+  );
 
   return data.fileUrl;
 }

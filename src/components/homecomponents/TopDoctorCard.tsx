@@ -183,9 +183,7 @@ export const TopDoctorCardSkeleton: React.FC = () => (
 
 const sk = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#EEEFF3',
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -229,9 +227,7 @@ const sk = StyleSheet.create({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#EEEFF3',
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -272,10 +268,10 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     marginTop: 10,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#BFDBFE',
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
@@ -355,7 +351,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   unavailablePill: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFEDD5',
   },
   availableText: {
     fontFamily: Fonts.raleway,
@@ -364,7 +360,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   unavailableText: {
-    color: '#6B7280',
+    color: '#F97316',
   },
   availablePillMuted: {
     backgroundColor: '#EFF6FF',

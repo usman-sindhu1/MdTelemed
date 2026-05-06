@@ -9,11 +9,28 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
+  Linking,
 } from 'react-native';
+import DocumentPicker from 'react-native-document-picker';
+import { uploadPickedReportFile } from '../../../utils/reportUpload';
+import RNBlobUtil from 'react-native-blob-util';
+import { showErrorToast } from '../../../utils/appToast';
+import { AttachmentPreviewModal } from '../../../components/chat/AttachmentPreviewModal';
 import Colors from '../../../constants/colors';
 import Fonts from '../../../constants/fonts';
 import Icons from '../../../assets/svg';
 import type { ChatBubbleUi } from '../../../utils/chatMessageUi';
+
+function filenameFromUrl(url: string | undefined): string {
+  if (!url) return '';
+  try {
+    const clean = decodeURIComponent(url.split('?')[0]);
+    return clean.split('/').pop() || '';
+  } catch {
+    return '';
+  }
+}
 
 export interface ConversationProps {
   doctorDisplayName: string;
@@ -21,6 +38,12 @@ export interface ConversationProps {
   messages: ChatBubbleUi[];
   messagesLoading?: boolean;
   onSend: (text: string) => void;
+  onSendAttachment?: (args: {
+    url: string;
+    filename: string;
+    mimeType: string;
+    kind: 'image' | 'file';
+  }) => void;
   sendPending?: boolean;
   composerDisabled?: boolean;
   composerHint?: string;
@@ -33,12 +56,19 @@ const Conversation: React.FC<ConversationProps> = ({
   messages,
   messagesLoading,
   onSend,
+  onSendAttachment,
   sendPending,
   composerDisabled,
   composerHint,
   bottomInset = 0,
 }) => {
   const [message, setMessage] = useState('');
+  const [preview, setPreview] = useState<{
+    visible: boolean;
+    kind: 'image' | 'file';
+    url?: string;
+    title?: string;
+  }>({ visible: false, kind: 'file' });
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -54,12 +84,58 @@ const Conversation: React.FC<ConversationProps> = ({
     setMessage('');
   };
 
+  const handleAttachPress = async () => {
+    if (!onSendAttachment) {
+      showErrorToast('Attachments not supported');
+      return;
+    }
+    try {
+      const res = await DocumentPicker.pickSingle({
+        // allow images + docs
+        type: [DocumentPicker.types.images, DocumentPicker.types.pdf, DocumentPicker.types.plainText, DocumentPicker.types.allFiles],
+        presentationStyle: 'fullScreen',
+      } as any);
+
+      const uri = res.uri;
+      const name = res.name || 'attachment';
+      const type = res.type || 'application/octet-stream';
+      let size: number | undefined = typeof res.size === 'number' ? res.size : undefined;
+      if (!size) {
+        try {
+          const stat = await RNBlobUtil.fs.stat(uri);
+          size = Number(stat.size);
+        } catch {
+          // ignore; upload helper will validate
+        }
+      }
+
+      const { fileUrl } = await uploadPickedReportFile({
+        uri,
+        name,
+        type,
+        sizeBytes: size,
+      });
+
+      const isImage = type.startsWith('image/');
+      onSendAttachment({
+        url: fileUrl,
+        filename: name,
+        mimeType: type,
+        kind: isImage ? 'image' : 'file',
+      });
+    } catch (e) {
+      if (DocumentPicker.isCancel(e)) return;
+      showErrorToast('Upload failed', (e as Error)?.message ?? 'Try again.');
+    }
+  };
+
   const inputBlocked = composerDisabled || Boolean(composerHint);
 
   const rootStyle = [styles.root, { marginBottom: bottomInset }];
 
   const chatCard = (
-    <View style={styles.chatCard}>
+    <>
+      <View style={styles.chatCard}>
         <View style={styles.chatHeader}>
           <View
             style={[
@@ -102,20 +178,98 @@ const Conversation: React.FC<ConversationProps> = ({
                   msg.isSent ? styles.sentMessage : styles.receivedMessage,
                 ]}
               >
-                <View
+                <TouchableOpacity
+                  activeOpacity={msg.url ? 0.85 : 1}
+                  onPress={() => {
+                    if (!msg.url) return;
+                    if (msg.kind === 'image' || msg.kind === 'file') {
+                      setPreview({
+                        visible: true,
+                        kind: msg.kind,
+                        url: msg.url,
+                        title: msg.filename || undefined,
+                      });
+                      return;
+                    }
+                    Linking.openURL(msg.url);
+                  }}
+                  disabled={!msg.url}
                   style={[
                     styles.messageBubble,
                     msg.isSent ? styles.sentBubble : styles.receivedBubble,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.messageText,
-                      msg.isSent ? styles.sentText : styles.receivedText,
-                    ]}
-                  >
-                    {msg.text}
-                  </Text>
+                  {msg.kind === 'image' ? (
+                    msg.url ? (
+                      <Image source={{ uri: msg.url }} style={styles.attachmentImage} />
+                    ) : (
+                      <View style={styles.attachmentCard}>
+                        <View style={styles.attachmentIcon}>
+                          <Icons.Report width={20} height={20} />
+                        </View>
+                        <View style={styles.attachmentTextCol}>
+                          <Text
+                            style={[
+                              styles.attachmentTitle,
+                              msg.isSent ? styles.sentText : styles.receivedText,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {msg.filename || msg.text}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.attachmentSub,
+                              msg.isSent ? styles.sentTime : styles.receivedTime,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            Preview unavailable (missing file URL)
+                          </Text>
+                        </View>
+                      </View>
+                    )
+                  ) : msg.kind === 'file' ? (
+                    <View
+                      style={[
+                        styles.filePill,
+                        msg.isSent ? styles.filePillSent : styles.filePillRecv,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.filePillIcon,
+                          msg.isSent
+                            ? styles.filePillIconSent
+                            : styles.filePillIconRecv,
+                        ]}
+                      >
+                        <Icons.Report width={18} height={18} />
+                      </View>
+                      <Text
+                        style={[
+                          styles.filePillName,
+                          msg.isSent ? styles.sentText : styles.receivedText,
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="middle"
+                      >
+                        {msg.filename ||
+                          filenameFromUrl(msg.url) ||
+                          msg.text ||
+                          'Document'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text
+                      style={[
+                        styles.messageText,
+                        msg.isSent ? styles.sentText : styles.receivedText,
+                      ]}
+                    >
+                      {msg.text}
+                    </Text>
+                  )}
                   <Text
                     style={[
                       styles.messageTime,
@@ -124,7 +278,7 @@ const Conversation: React.FC<ConversationProps> = ({
                   >
                     {msg.time}
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
             ))
           )}
@@ -139,7 +293,7 @@ const Conversation: React.FC<ConversationProps> = ({
             style={styles.attachButton}
             activeOpacity={0.7}
             disabled={inputBlocked}
-            onPress={() => {}}
+            onPress={handleAttachPress}
           >
             <Icons.Vector5Icon width={20} height={20} />
           </TouchableOpacity>
@@ -169,6 +323,15 @@ const Conversation: React.FC<ConversationProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      <AttachmentPreviewModal
+        visible={preview.visible}
+        kind={preview.kind}
+        url={preview.url}
+        title={preview.title}
+        onClose={() => setPreview((p) => ({ ...p, visible: false }))}
+      />
+    </>
   );
 
   /* Android: rely on android:windowSoftInputMode="adjustResize" — avoid KAV (conflicts with resize). */
@@ -306,6 +469,93 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     lineHeight: 20,
+  },
+  attachmentImage: {
+    width: 220,
+    height: 160,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+    marginBottom: 8,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  fileName: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  attachmentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  attachmentIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  attachmentTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  attachmentTitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  attachmentSub: {
+    fontFamily: Fonts.openSans,
+    fontSize: 11,
+    fontWeight: '700',
+    opacity: 0.85,
+  },
+  filePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginBottom: 8,
+  },
+  filePillSent: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  filePillRecv: {
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  filePillIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filePillIconSent: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  filePillIconRecv: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  filePillName: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '700',
   },
   sentText: {
     color: '#FFFFFF',

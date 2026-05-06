@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -32,34 +32,77 @@ const ChangePassword: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const passwordPolicyError = useMemo(() => {
+    const n = newPassword.trim();
+    if (!n) return '';
+    if (n.length < 10) return 'Password must be at least 10 characters';
+    if (!/[A-Z]/.test(n)) return 'Password must include at least one uppercase letter';
+    if (!/[a-z]/.test(n)) return 'Password must include at least one lowercase letter';
+    return '';
+  }, [newPassword]);
+
   const { onRequest, isPending } = useApi<{ oldPassword: string; newPassword: string }>({
     key: 'change-password-logged-in',
     isSuccessToast: false,
   });
 
+  const isFormValid = useMemo(() => {
+    const o = oldPassword.trim();
+    const n = newPassword.trim();
+    const c = confirmPassword.trim();
+    if (!o || !n || !c) return false;
+    if (passwordPolicyError) return false;
+    if (n !== c) return false;
+    if (o === n) return false;
+    return true;
+  }, [oldPassword, newPassword, confirmPassword, passwordPolicyError]);
+
   const handleBackPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
+    // This screen is mounted under the Drawer navigator. If it was opened via
+    // `navigate('ChangePassword')` (no stack history), `goBack()` can fall back
+    // to drawer behavior on some setups. Prefer returning to Settings tab.
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.dispatch(DrawerActions.closeDrawer());
+    (navigation as any).navigate('MainTabs', {
+      screen: 'Settings',
+      params: { screen: 'SettingsMain' },
+    });
   };
 
   const handleUpdatePassword = async () => {
-    if (oldPassword.length < 6) {
-      showErrorToast('Current password must be at least 6 characters.');
+    const o = oldPassword.trim();
+    const n = newPassword.trim();
+    const c = confirmPassword.trim();
+
+    if (!o) {
+      showErrorToast('Please enter your current password.');
       return;
     }
-    if (newPassword.length < 6) {
-      showErrorToast('New password must be at least 6 characters.');
+    if (!n) {
+      showErrorToast('Please enter a new password.');
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (passwordPolicyError) {
+      showErrorToast(passwordPolicyError);
+      return;
+    }
+    if (n !== c) {
       showErrorToast('New password and confirmation do not match.');
+      return;
+    }
+    if (o === n) {
+      showErrorToast('New password must be different from the current password.');
       return;
     }
 
     onRequest({
       path: authPaths.changePassword,
-      data: { oldPassword, newPassword },
+      data: { oldPassword: o, newPassword: n },
       onSuccess: () => {
-        showSuccessToast('Password updated');
+        showSuccessToast('Password changed successfully');
         setOldPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -110,10 +153,13 @@ const ChangePassword: React.FC = () => {
           {/* Update Password Button */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.updateButton, isPending && { opacity: 0.85 }]}
+              style={[
+                styles.updateButton,
+                (!isFormValid || isPending) && styles.updateButtonDisabled,
+              ]}
               onPress={handleUpdatePassword}
               activeOpacity={0.7}
-              disabled={isPending}
+              disabled={!isFormValid || isPending}
             >
               {isPending ? (
                 <ActivityIndicator color={Colors.buttonText} />
@@ -135,7 +181,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   content: {
     paddingHorizontal: 15,
@@ -165,6 +211,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  updateButtonDisabled: {
+    opacity: 0.55,
   },
   updateButtonText: {
     fontFamily: Fonts.raleway,

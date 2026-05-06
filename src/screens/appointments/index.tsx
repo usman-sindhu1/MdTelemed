@@ -169,6 +169,38 @@ const Appointments: React.FC = () => {
     [navigation],
   );
 
+  const handleCardPrimaryAction = useCallback(
+    (row: AppointmentListRow) => {
+      if (row.appointmentCallType === 'CHAT') {
+        navigation.navigate('AppointmentDetails', {
+          appointmentId: row.id,
+          initialTab: 'Messages',
+        });
+        return;
+      }
+      navigation.navigate('JoinSession', {
+        appointmentId: row.id,
+        appointmentCallType: row.appointmentCallType,
+      });
+    },
+    [navigation],
+  );
+
+  const callTypeLabel = useCallback((t: AppointmentListRow['appointmentCallType']) => {
+    if (t === 'CHAT') return 'Chat';
+    if (t === 'AUDIO') return 'Audio';
+    return 'Video';
+  }, []);
+
+  const primaryActionLabel = useCallback(
+    (row: AppointmentListRow) => {
+      if (row.appointmentCallType === 'CHAT') return 'Open Chat';
+      if (row.appointmentCallType === 'AUDIO') return 'Join Audio';
+      return 'Join Video';
+    },
+    [],
+  );
+
   const handleScrollStart = () => {
     setIsScrollingDown(true);
   };
@@ -210,13 +242,32 @@ const Appointments: React.FC = () => {
               <Text style={styles.doctorName} numberOfLines={1}>
                 {item.doctorName}
               </Text>
-              <View style={[styles.statusPill, badgeToneToStyle(item.badgeTone)]}>
-                <Text style={styles.statusText}>{item.badgeLabel}</Text>
+              <View
+                style={[
+                  styles.statusPill,
+                  item.badgeTone === 'upcoming'
+                    ? styles.statusPillUpcoming
+                    : badgeToneToStyle(item.badgeTone),
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    item.badgeTone === 'upcoming' && styles.statusTextUpcoming,
+                  ]}
+                >
+                  {item.badgeLabel}
+                </Text>
               </View>
             </View>
             <Text style={styles.specialty} numberOfLines={1}>
               {item.specialty}
             </Text>
+            <View style={styles.callTypeRow}>
+              <View style={styles.callTypePill}>
+                <Text style={styles.callTypeText}>{callTypeLabel(item.appointmentCallType)}</Text>
+              </View>
+            </View>
 
             <View style={styles.metaRow}>
               <View style={styles.datetimeWrap}>
@@ -233,12 +284,27 @@ const Appointments: React.FC = () => {
                   </Text>
                 </View>
               </View>
+
+              {item.badgeTone === 'upcoming' ? (
+                <TouchableOpacity
+                  style={styles.joinBtn}
+                  onPress={(e) => {
+                    (e as any)?.stopPropagation?.();
+                    handleCardPrimaryAction(item);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.joinBtnText} numberOfLines={1}>
+                    {primaryActionLabel(item)}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
         </View>
       </TouchableOpacity>
     ),
-    [handleCardPress],
+    [callTypeLabel, handleCardPress, handleCardPrimaryAction, primaryActionLabel],
   );
 
   const ListHeader = (
@@ -323,14 +389,40 @@ const Appointments: React.FC = () => {
                   <View style={styles.cardRow}>
                     <ShimmerBox width="30%" height={152} borderRadius={0} />
                     <View style={styles.cardRight}>
-                      <ShimmerBox height={18} borderRadius={8} />
-                      <ShimmerBox height={14} borderRadius={6} width="70%" style={{ marginTop: 8 }} />
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, gap: 10 }}>
-                        <View style={{ flexDirection: 'row', gap: 14, flex: 1 }}>
-                          <ShimmerBox width={80} height={14} borderRadius={6} />
-                          <ShimmerBox width={80} height={14} borderRadius={6} />
+                      {/* name + status pill */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <ShimmerBox height={16} borderRadius={8} width="60%" />
+                        <ShimmerBox height={20} borderRadius={999} width={72} />
+                      </View>
+                      {/* specialty */}
+                      <ShimmerBox
+                        height={12}
+                        borderRadius={6}
+                        width="45%"
+                        style={{ marginTop: 8 }}
+                      />
+                      {/* call type pill */}
+                      <ShimmerBox
+                        height={18}
+                        borderRadius={999}
+                        width={64}
+                        style={{ marginTop: 10 }}
+                      />
+                      {/* date/time stacked + action button */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-end',
+                          marginTop: 'auto',
+                          gap: 10,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'column', gap: 8, flex: 1 }}>
+                          <ShimmerBox width={120} height={12} borderRadius={6} />
+                          <ShimmerBox width={92} height={12} borderRadius={6} />
                         </View>
-                        <ShimmerBox width={88} height={32} borderRadius={999} />
+                        <ShimmerBox width={108} height={36} borderRadius={999} />
                       </View>
                     </View>
                   </View>
@@ -574,12 +666,13 @@ const styles = StyleSheet.create({
   cardRight: {
     flex: 1,
     minWidth: 0,
-    padding: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     justifyContent: 'flex-start',
   },
   nameRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
@@ -603,17 +696,35 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
   },
+  callTypeRow: {
+    marginTop: 6,
+  },
+  callTypePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E8EEF9',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  callTypeText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+  },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginTop: 'auto',
     gap: 10,
   },
   datetimeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 8,
     flex: 1,
     minWidth: 0,
   },
@@ -622,6 +733,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     alignSelf: 'center',
+  },
+  statusPillUpcoming: {
+    backgroundColor: '#E8EEF9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   statusUpcoming: {
     backgroundColor: Colors.primary,
@@ -645,12 +761,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textTransform: 'lowercase',
   },
+  statusTextUpcoming: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     minWidth: 0,
-    maxWidth: '52%',
+    maxWidth: '100%',
   },
   detailText: {
     fontFamily: Fonts.openSans,
@@ -658,6 +780,21 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
     flexShrink: 1,
+  },
+  joinBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 108,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinBtnText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   emptyCenterWrap: {
     justifyContent: 'center',

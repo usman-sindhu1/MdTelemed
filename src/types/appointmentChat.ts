@@ -12,6 +12,9 @@ export interface ChatMessageRow {
   id: string;
   content?: string;
   messageType?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
   createdAt?: string;
   sender?: ChatMessageSender;
 }

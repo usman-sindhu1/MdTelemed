@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { Svg, Path, Circle, Rect } from 'react-native-svg';
+import RNBlobUtil from 'react-native-blob-util';
 import { useSelector } from 'react-redux';
 import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Input from '../../components/Input';
@@ -177,6 +178,7 @@ const ProfileSettings: React.FC = () => {
   const [genderDropdownOpen, setGenderDropdownOpen] = useState(false);
   const phoneInputRef = useRef<PhoneNumberInput>(null);
   const pendingImageMime = useRef<string | undefined>(undefined);
+  const pendingImageSizeBytes = useRef<number | undefined>(undefined);
 
   const { onRequest: patchPatientProfile, isPending: savePending } =
     useApi<PatchPatientBody>({
@@ -247,6 +249,7 @@ const ProfileSettings: React.FC = () => {
           uploadedImageUrl = await uploadLocalProfileImage(
             avatarUri as string,
             pendingImageMime.current,
+            pendingImageSizeBytes.current,
           );
         }
       } catch (e: unknown) {
@@ -277,6 +280,7 @@ const ProfileSettings: React.FC = () => {
             setAvatarUri(uploadedImageUrl);
           }
           pendingImageMime.current = undefined;
+          pendingImageSizeBytes.current = undefined;
 
           const base = (authUser ?? {}) as Record<string, unknown>;
           const serverUser =
@@ -339,6 +343,22 @@ const ProfileSettings: React.FC = () => {
         const asset = response.assets?.[0];
         const uri = asset?.uri;
         pendingImageMime.current = asset?.type;
+        pendingImageSizeBytes.current =
+          typeof asset?.fileSize === 'number' ? asset.fileSize : undefined;
+        if (uri && pendingImageSizeBytes.current == null) {
+          // Some pickers don't return fileSize; stat the uri so `fileSizeBytes` is always provided.
+          void RNBlobUtil.fs
+            .stat(uri)
+            .then((s) => {
+              const size = Number((s as any)?.size);
+              if (Number.isFinite(size) && size > 0) {
+                pendingImageSizeBytes.current = size;
+              }
+            })
+            .catch(() => {
+              // ignore; upload helper will show a friendly error if missing
+            });
+        }
         if (uri) setAvatarUri(uri);
       },
     );

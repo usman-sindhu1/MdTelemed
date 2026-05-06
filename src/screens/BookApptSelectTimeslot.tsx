@@ -23,7 +23,6 @@ import Button from '../components/Button';
 import Icons from '../assets/svg';
 import Colors from '../constants/colors';
 import Fonts from '../constants/fonts';
-import BookingFlowDoctorCard from '../components/booking/BookingFlowDoctorCard';
 import ShimmerBox from '../components/common/ShimmerBox';
 import { useDoctorAvailableSlots } from '../hooks/useDoctorAvailableSlots';
 import {
@@ -338,12 +337,6 @@ const BookApptSelectTimeslot: React.FC = () => {
           <Text style={styles.warnBanner}>
             No clinician selected — go back and choose a doctor first.
           </Text>
-        ) : null}
-
-        {selectedDoctor ? (
-          <View style={styles.doctorCardWrap}>
-            <BookingFlowDoctorCard doctor={selectedDoctor} />
-          </View>
         ) : null}
 
         {/* Calendar */}

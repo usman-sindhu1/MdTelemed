@@ -26,6 +26,7 @@ export interface AppointmentListRow {
   doctorName: string;
   doctorImageUri?: string;
   specialty: string;
+  appointmentCallType: 'CHAT' | 'AUDIO' | 'VIDEO';
   date: string;
   time: string;
   badgeLabel: string;
@@ -106,6 +107,13 @@ export function usePatientAppointmentsList(selectedTab: AppointmentsTab) {
       const item = flatItems[i];
       const dq = detailQueries[i];
       const start = dq?.data?.timeSlot?.startDate;
+      const rawCallType =
+        dq?.data?.appointment?.appointmentCallType ?? dq?.data?.appointment?.callType;
+      const normalizedCallType = (() => {
+        const t = String(rawCallType ?? '').trim().toUpperCase();
+        if (t === 'CHAT' || t === 'AUDIO' || t === 'VIDEO') return t;
+        return 'VIDEO';
+      })();
       let date = '—';
       let time = '—';
       if (start) {
@@ -125,6 +133,7 @@ export function usePatientAppointmentsList(selectedTab: AppointmentsTab) {
         doctorName: formatDoctorName(item.doctor),
         doctorImageUri: item.doctor?.image ?? undefined,
         specialty,
+        appointmentCallType: normalizedCallType,
         date,
         time,
         badgeLabel: label,

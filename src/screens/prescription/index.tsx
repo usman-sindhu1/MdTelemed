@@ -158,7 +158,12 @@ const Prescription: React.FC = () => {
           onPress={() => openDetails(item.id)}
           activeOpacity={0.7}
         >
-          <View style={styles.cardHeader}>
+          <View style={styles.topRow}>
+            <View style={styles.titleCol}>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.title?.trim() || 'Prescription'}
+              </Text>
+            </View>
             <View style={styles.dateLabel}>
               <Icons.CalendarTodayIcon width={14} height={14} />
               <Text style={styles.dateText}>
@@ -167,53 +172,45 @@ const Prescription: React.FC = () => {
             </View>
           </View>
 
-          <View style={styles.prescriptionSection}>
-            <Text style={styles.sectionLabel}>Prescription title:</Text>
-            <Text style={styles.prescriptionTitle}>
-              {item.title?.trim() || 'Prescription'}
-            </Text>
-          </View>
-
-          <View style={styles.doctorSection}>
-            <View style={styles.doctorInfo}>
-              <View style={styles.outerBorderContainer}>
-                <View style={styles.borderContainer}>
-                  <View style={styles.imageContainer}>
-                    {imgUri ? (
-                      <Image
-                        source={{ uri: imgUri }}
-                        style={styles.avatarImage}
-                      />
-                    ) : (
-                      <View style={styles.placeholderImage} />
-                    )}
-                  </View>
-                </View>
-              </View>
-              <View style={styles.doctorTextWrap}>
-                <Text style={styles.sectionLabel}>Doctor</Text>
-                <Text style={styles.doctorName} numberOfLines={2}>
-                  {formatDoctorUserName(doctorUser)}
-                </Text>
-              </View>
+          <View style={styles.doctorRow}>
+            {imgUri ? (
+              <Image source={{ uri: imgUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarFallback} />
+            )}
+            <View style={styles.doctorNameCol}>
+              <Text style={styles.doctorNameLabel}>Doctor</Text>
+              <Text style={styles.doctorNameValue} numberOfLines={2}>
+                {formatDoctorUserName(doctorUser)}
+              </Text>
             </View>
           </View>
 
           <View style={styles.metaRow}>
-            <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>Service: {serviceLabel}</Text>
+            <View style={styles.metaPill}>
+              <Text style={styles.metaPillText} numberOfLines={1}>
+                Service: <Text style={styles.metaPillValue}>{serviceLabel}</Text>
+              </Text>
             </View>
-            <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>For: {forLabel}</Text>
+            <View style={styles.metaPill}>
+              <Text style={styles.metaPillText} numberOfLines={1}>
+                For: <Text style={styles.metaPillValue}>{forLabel}</Text>
+              </Text>
             </View>
-            <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>Meds: {medCount}</Text>
+            <View style={styles.metaPill}>
+              <Text style={styles.metaPillText} numberOfLines={1}>
+                Meds: <Text style={styles.metaPillValue}>{medCount}</Text>
+              </Text>
             </View>
           </View>
 
-          <View style={styles.instructionsCard}>
+          <View style={styles.divider} />
+
+          <View style={styles.instructionsSection}>
             <Text style={styles.instructionsTitle}>Medication instructions</Text>
-            <Text style={styles.detailText}>{advisePreview}</Text>
+            <Text style={styles.detailText} numberOfLines={3}>
+              {advisePreview}
+            </Text>
           </View>
 
           <View style={styles.actionRow}>
@@ -450,10 +447,9 @@ const styles = StyleSheet.create({
   prescriptionCard: {
     marginHorizontal: 15,
     marginBottom: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#EEEFF3',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
     padding: 16,
     gap: 14,
   },
@@ -554,42 +550,84 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatarImage: {
-    width: '100%',
-    height: '100%',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#E8EEF9',
   },
-  placeholderImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 22,
+  avatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#E8EEF9',
   },
-  doctorName: {
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  titleCol: { flex: 1, minWidth: 0, gap: 3 },
+  cardTitle: {
     fontFamily: Fonts.raleway,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
-    flex: 1,
   },
-  doctorTextWrap: {
-    flex: 1,
-    minWidth: 0,
+  doctorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  doctorNameCol: { flex: 1, minWidth: 0, gap: 2 },
+  doctorNameLabel: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textLight,
+  },
+  doctorNameValue: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    lineHeight: 18,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  metaChip: {
+  metaPill: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     borderRadius: 14,
-    backgroundColor: '#EEF2FF',
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
-  metaChipText: {
+  metaPillText: {
     fontFamily: Fonts.openSans,
     fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
+    color: Colors.textLight,
+  },
+  metaPillValue: {
+    color: Colors.primary,
+    fontWeight: '800',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  instructionsSection: {
+    gap: 4,
+  },
+  placeholderImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 22,
   },
   instructionsCard: {
     borderRadius: 12,
@@ -612,7 +650,7 @@ const styles = StyleSheet.create({
   },
   secondaryPill: {
     borderRadius: 18,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
@@ -628,7 +666,7 @@ const styles = StyleSheet.create({
   },
   primaryPill: {
     borderRadius: 18,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     backgroundColor: Colors.primary,
     flex: 1.2,
@@ -652,31 +690,29 @@ const styles = StyleSheet.create({
 function PrescriptionCardSkeleton() {
   return (
     <View style={styles.prescriptionCard}>
-      <View style={styles.cardHeader}>
-        <ShimmerBox width={120} height={28} borderRadius={14} />
+      <View style={styles.topRow}>
+        <View style={styles.titleCol}>
+          <ShimmerBox height={18} borderRadius={9} width="70%" />
+          <ShimmerBox height={12} borderRadius={6} width="55%" />
+        </View>
+        <ShimmerBox width={110} height={28} borderRadius={14} />
       </View>
-      <View style={styles.prescriptionSection}>
-        <ShimmerBox height={12} borderRadius={6} width="40%" />
-        <ShimmerBox height={22} borderRadius={8} width="85%" />
-      </View>
-          <View style={styles.doctorSection}>
-        <View style={styles.doctorInfo}>
-          <ShimmerBox width={50} height={50} borderRadius={25} />
-          <View style={styles.skeletonDoctorTextCol}>
-            <ShimmerBox height={12} borderRadius={6} width={48} />
-            <ShimmerBox height={18} borderRadius={8} width="70%" />
-          </View>
+
+      <View style={styles.doctorRow}>
+        <ShimmerBox width={48} height={48} borderRadius={16} />
+        <View style={{ flex: 1 }}>
+          <ShimmerBox height={12} borderRadius={6} width="90%" />
+          <View style={{ height: 6 }} />
+          <ShimmerBox height={12} borderRadius={6} width="70%" />
         </View>
       </View>
-      <View style={styles.metaRow}>
-        <ShimmerBox width={100} height={28} borderRadius={14} />
-        <ShimmerBox width={72} height={28} borderRadius={14} />
-        <ShimmerBox width={64} height={28} borderRadius={14} />
-      </View>
-      <View style={styles.instructionsCard}>
-        <ShimmerBox height={14} borderRadius={6} width={140} />
+
+      <View style={styles.divider} />
+
+      <View style={styles.instructionsSection}>
+        <ShimmerBox height={14} borderRadius={6} width={160} />
         <ShimmerBox height={14} borderRadius={6} width="100%" />
-        <ShimmerBox height={14} borderRadius={6} width="90%" />
+        <ShimmerBox height={14} borderRadius={6} width="85%" />
       </View>
       <View style={styles.actionRow}>
         <ShimmerBox

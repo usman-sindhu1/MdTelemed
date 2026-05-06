@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -13,21 +14,24 @@ import HomeHeader from '../../components/common/HomeHeader';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { useScrollContext } from '../../contexts/ScrollContext';
+import type { PatientNotification } from '../../types/notifications';
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  usePatientNotifications,
+} from '../../hooks/usePatientNotifications';
 
-interface NotificationData {
-  id: string;
-  title: string;
-  message: string;
-  date: string;
-  time: string;
-  type: 'Appointment' | 'Payment' | 'Prescription' | 'Push';
-  isRead: boolean;
-}
+type UiTab = 'All' | 'Appointment' | 'Payment' | 'Prescription' | 'Push';
 
 const Notifications: React.FC = () => {
   const navigation = useNavigation();
   const { setIsScrollingDown } = useScrollContext();
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Appointment' | 'Payment' | 'Prescription' | 'Push'>('All');
+  const [activeFilter, setActiveFilter] = useState<UiTab>('All');
+  const [search, setSearch] = useState('');
+
+  const notificationsQuery = usePatientNotifications();
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
 
   useEffect(() => {
     return () => {
@@ -35,51 +39,12 @@ const Notifications: React.FC = () => {
     };
   }, [setIsScrollingDown]);
 
-  const notifications: NotificationData[] = [
-    {
-      id: '1',
-      title: 'Appointment Reminder',
-      message: 'You have an appointment with Dr. Cody Fisher tomorrow at 11:00 AM',
-      date: 'Jan 22, 2025',
-      time: '10:30 AM',
-      type: 'Appointment',
-      isRead: false,
-    },
-    {
-      id: '2',
-      title: 'Prescription Ready',
-      message: 'Your prescription for Skin Care is ready for download',
-      date: 'Jan 21, 2025',
-      time: '02:15 PM',
-      type: 'Prescription',
-      isRead: false,
-    },
-    {
-      id: '3',
-      title: 'Payment Confirmed',
-      message: 'Your payment of $150 has been confirmed for appointment ID: 5646543',
-      date: 'Jan 20, 2025',
-      time: '09:45 AM',
-      type: 'Payment',
-      isRead: true,
-    },
-    {
-      id: '4',
-      title: 'Push Notifications Enabled',
-      message: 'Firebase push notifications are active. You will receive reminders and prescription updates.',
-      date: 'Jan 20, 2025',
-      time: '08:20 AM',
-      type: 'Push',
-      isRead: true,
-    },
-  ];
-
   const handleMenuPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
   const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+    setSearch(text);
   };
 
   const handleAIChatPress = () => {
@@ -91,30 +56,67 @@ const Notifications: React.FC = () => {
     navigation.navigate('Chat' as never);
   };
 
-  const handleNotificationPress = (notification: NotificationData) => {
-    console.log('Notification pressed:', notification);
+  const parseAppointmentIdFromUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    const m = String(url).match(/\/patient\/appointments\/([^/]+)\s*$/i);
+    return m?.[1] ? decodeURIComponent(m[1]) : null;
+  };
+
+  const handleNotificationPress = (notification: PatientNotification) => {
+    if (!notification.isRead) {
+      markRead.mutate(notification.id);
+    }
+    const apptId = parseAppointmentIdFromUrl(notification.url);
+    if (apptId) {
+      // Notifications live under BottomTabs; route via the Appointments tab stack.
+      (navigation as any).navigate('Calendar', {
+        screen: 'AppointmentDetails',
+        params: { appointmentId: apptId },
+      });
+    }
+  };
+
+  const tabLabelFromType = (type: string): Exclude<UiTab, 'All'> => {
+    const t = String(type ?? '').trim().toUpperCase();
+    if (t.startsWith('APPOINTMENT')) return 'Appointment';
+    if (t === 'PAYMENT') return 'Payment';
+    if (t === 'PRESCRIPTION') return 'Prescription';
+    return 'Push';
   };
 
   const filteredNotifications = useMemo(() => {
-    if (activeFilter === 'All') {
-      return notifications;
-    }
-    return notifications.filter((item) => item.type === activeFilter);
-  }, [activeFilter, notifications]);
+    const list = notificationsQuery.data ?? [];
+    const q = search.trim().toLowerCase();
+    return list.filter((n) => {
+      const tab = tabLabelFromType(n.type);
+      const matchesTab = activeFilter === 'All' ? true : tab === activeFilter;
+      if (!matchesTab) return false;
+      if (!q) return true;
+      const hay = `${n.title ?? ''}\n${n.description ?? ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [activeFilter, notificationsQuery.data, search]);
 
-  const getTypeStyle = (type: NotificationData['type']) => {
-    switch (type) {
-      case 'Appointment':
-        return styles.typeAppointment;
-      case 'Payment':
-        return styles.typePayment;
-      case 'Prescription':
-        return styles.typePrescription;
-      case 'Push':
-        return styles.typePush;
-      default:
-        return styles.typeAppointment;
-    }
+  const getTypeStyle = (type: string) => {
+    const tab = tabLabelFromType(type);
+    if (tab === 'Appointment') return styles.typeAppointment;
+    if (tab === 'Payment') return styles.typePayment;
+    if (tab === 'Prescription') return styles.typePrescription;
+    return styles.typePush;
+  };
+
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+    const time = d.toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return { date, time };
   };
 
   const handleScrollStart = () => {
@@ -124,6 +126,15 @@ const Notifications: React.FC = () => {
   const handleScrollStop = () => {
     setIsScrollingDown(false);
   };
+
+  const onRefresh = async () => {
+    await notificationsQuery.refetch();
+  };
+
+  const anyUnread = useMemo(
+    () => (notificationsQuery.data ?? []).some((n) => !n.isRead),
+    [notificationsQuery.data],
+  );
 
   return (
     <View style={styles.container}>
@@ -135,6 +146,14 @@ const Notifications: React.FC = () => {
           onMomentumScrollBegin={handleScrollStart}
           onScrollEndDrag={handleScrollStop}
           onMomentumScrollEnd={handleScrollStop}
+          refreshControl={
+            <RefreshControl
+              refreshing={Boolean(notificationsQuery.isFetching)}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+              colors={[Colors.primary]}
+            />
+          }
         >
           <View style={styles.headerContainer}>
             <HomeHeader
@@ -142,6 +161,7 @@ const Notifications: React.FC = () => {
               onSearchChange={handleSearchChange}
               onAIChatPress={handleAIChatPress}
               placeholder="Search notifications"
+              value={search}
               showFeelingRow={false}
               showNotificationIcon={false}
             />
@@ -153,6 +173,21 @@ const Notifications: React.FC = () => {
             <Text style={styles.description}>
               Appointment reminders, payment confirmations, prescription updates, and push notification status.
             </Text>
+            <View style={styles.titleActionsRow}>
+              <Text style={styles.unreadCount}>
+                Unread: {(notificationsQuery.data ?? []).filter((n) => !n.isRead).length}
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => markAllRead.mutate()}
+                disabled={!anyUnread || markAllRead.isPending}
+                style={[styles.markAllBtn, (!anyUnread || markAllRead.isPending) && styles.markAllBtnDisabled]}
+              >
+                <Text style={[styles.markAllBtnText, (!anyUnread || markAllRead.isPending) && styles.markAllBtnTextDisabled]}>
+                  Mark all read
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.filterRow}>
@@ -187,18 +222,28 @@ const Notifications: React.FC = () => {
               >
                 <View style={styles.cardHeader}>
                   <View style={[styles.typeLabel, getTypeStyle(notification.type)]}>
-                    <Text style={styles.typeText}>{notification.type}</Text>
+                    <Text style={styles.typeText}>
+                      {tabLabelFromType(notification.type)}
+                    </Text>
                   </View>
                   <View style={styles.dateLabel}>
-                    <Text style={styles.dateText}>
-                      {notification.date} | {notification.time}
-                    </Text>
+                    {(() => {
+                      const dt = formatDateTime(notification.createdAt);
+                      return (
+                        <View style={styles.dateRow}>
+                          {!notification.isRead ? <View style={styles.unreadDot} /> : null}
+                          <Text style={styles.dateText}>
+                            {dt.date} | {dt.time}
+                          </Text>
+                        </View>
+                      );
+                    })()}
                   </View>
                 </View>
 
                 <View style={styles.notificationContent}>
                   <Text style={styles.notificationTitle}>{notification.title}</Text>
-                  <Text style={styles.notificationMessage}>{notification.message}</Text>
+                  <Text style={styles.notificationMessage}>{notification.description}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -237,6 +282,36 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 24,
     gap: 8,
+  },
+  titleActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  unreadCount: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  markAllBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#E8EEF9',
+  },
+  markAllBtnDisabled: {
+    backgroundColor: '#F1F5F9',
+  },
+  markAllBtnText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  markAllBtnTextDisabled: {
+    color: '#94A3B8',
   },
   heading: {
     fontFamily: Fonts.raleway,
@@ -304,16 +379,24 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   notificationCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#EEEFF3',
     borderRadius: 12,
     padding: 16,
     gap: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    borderLeftWidth: 3,
+    borderLeftColor: '#E2E8F0',
   },
   unreadCard: {
-    borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
+    backgroundColor: '#EEEFF3',
+    borderColor: '#BFDBFE',
+    borderLeftColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -348,6 +431,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2563EB',
   },
   dateText: {
     fontFamily: Fonts.openSans,

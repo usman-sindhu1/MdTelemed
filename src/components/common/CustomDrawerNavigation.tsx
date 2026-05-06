@@ -4,20 +4,28 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Modal,
   Image,
 } from 'react-native';
 import { DrawerContentScrollView, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Svg, Path, Circle, Rect, Text as SvgText } from 'react-native-svg';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import Icons from '../../assets/svg';
 import { logout } from '../../store/slices/authSlice';
 import { clearAuthSession } from '../../utils/authSession';
+import type { RootState } from '../../store';
+import { useLocationDisplay } from '../../hooks/useLocationDisplay';
+import {
+  getSavedAddress,
+  getUserAvatarUri,
+  getUserDisplayName,
+  getUserEmail,
+} from '../../utils/profileDisplay';
 
 interface DrawerItem {
   id: string;
@@ -29,6 +37,15 @@ interface DrawerItem {
 const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
   const dispatch = useDispatch();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const insets = useSafeAreaInsets();
+  const authUser = useSelector((s: RootState) => s.auth.user) as Record<
+    string,
+    unknown
+  > | null;
+  const displayName = getUserDisplayName(authUser);
+  const email = getUserEmail(authUser);
+  const avatarUri = getUserAvatarUri(authUser);
+  const { locationLine } = useLocationDisplay(getSavedAddress(authUser));
 
   // Get current route state
   const state = props.state;
@@ -73,8 +90,9 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
       const tabToItemMap: { [key: string]: string } = {
         'Home': 'home',
         'Calendar': 'appointments',
-        'Chat': 'chats',
         'Prescription': 'prescriptions',
+        'Notifications': 'notifications',
+        'Settings': 'profile-settings',
       };
       return tabToItemMap[activeTabName] || null;
     }
@@ -113,9 +131,9 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
       ),
     },
     {
-      id: 'chats',
-      label: 'Chats',
-      icon: <Icons.Chat1Icon width={24} height={24} />,
+      id: 'notifications',
+      label: 'Notifications',
+      icon: <Icons.NotificationsBlackIcon width={24} height={24} />,
     },
     {
       id: 'doctors',
@@ -192,8 +210,9 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
     const tabMap: { [key: string]: string } = {
       'home': 'Home',
       'appointments': 'Calendar',
-      'chats': 'Chat',
       'prescriptions': 'Prescription',
+      'notifications': 'Notifications',
+      'profile-settings': 'Settings',
     };
 
     const screenName = tabMap[itemId];
@@ -277,140 +296,185 @@ const CustomDrawer: React.FC<DrawerContentComponentProps> = (props) => {
   };
 
   return (
-    <DrawerContentScrollView {...props} style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../../assets/svg/logo1.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        <Text style={styles.headerTitle}>Profile Options</Text>
-      </View>
-
-      {/* Profile Options Section */}
-      <View style={styles.section}>
-        {profileOptions.map(renderDrawerItem)}
-      </View>
-
-      {/* Account Settings Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Settings</Text>
-        {accountSettings.map(renderDrawerItem)}
-      </View>
-
-      {/* Logout Loading Modal */}
-      <Modal
-        visible={isLoggingOut}
-        transparent={true}
-        animationType="fade"
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <DrawerContentScrollView
+        {...props}
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: 20 + Math.max(insets.bottom, 12) },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Logging out...</Text>
+        <View style={styles.headerCard}>
+          <View style={styles.headerTopRow}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Text style={styles.avatarInitial}>
+                  {(displayName.trim() || 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.headerTextCol}>
+              <Text style={styles.headerName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={styles.headerEmail} numberOfLines={1}>
+                {email || '—'}
+              </Text>
+              <View style={styles.locationRow}>
+                <Icons.LocationIcon width={14} height={14} />
+                <Text style={styles.locationText} numberOfLines={2}>
+                  {locationLine}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
-      </Modal>
-    </DrawerContentScrollView>
+
+        <Text style={styles.sectionTitle}>Menu</Text>
+        <View style={styles.sectionCard}>{profileOptions.map(renderDrawerItem)}</View>
+
+        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Account Settings</Text>
+        <View style={styles.sectionCard}>{accountSettings.map(renderDrawerItem)}</View>
+
+        {/* Logout Loading Modal */}
+        <Modal
+          visible={isLoggingOut}
+          transparent={true}
+          animationType="fade"
+        >
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.loadingText}>Logging out...</Text>
+            </View>
+          </View>
+        </Modal>
+      </DrawerContentScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
   },
-  header: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-    gap: 12,
+  scroll: {
+    flex: 1,
   },
-  logoContainer: {
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-  },
-  logo: {
-    width: 80,
-    height: 80,
-  },
-  headerTitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  section: {
-    paddingVertical: 8,
+  container: {
+    flexGrow: 1,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 0,
   },
   sectionTitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    marginBottom: 10,
+    marginLeft: 2,
+  },
+  headerCard: {
+    borderRadius: 18,
+    backgroundColor: '#ECF2FD',
+    padding: 14,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  headerTextCol: { flex: 1, minWidth: 0 },
+  headerName: {
     fontFamily: Fonts.raleway,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textPrimary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    marginTop: 8,
+  },
+  headerEmail: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    color: Colors.textLight,
+    marginTop: 2,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  locationText: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
   },
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginHorizontal: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 12,
   },
   drawerItemActive: {
-    backgroundColor: Colors.backgroundGradient.start,
-    borderTopRightRadius: 80,
-    borderBottomRightRadius: 80,
+    backgroundColor: '#E8EEF9',
   },
   iconContainer: {
-    width: 24,
-    height: 24,
-    marginRight: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
     justifyContent: 'center',
     alignItems: 'center',
   },
   drawerItemText: {
-    fontFamily: Fonts.openSans,
-    fontSize: 16,
-    fontWeight: '400',
-    color: Colors.textPrimary,
     flex: 1,
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.textPrimary,
   },
   drawerItemTextActive: {
     color: Colors.primary,
-    fontWeight: '600',
   },
   destructiveText: {
     color: '#EF4444',
-  },
-  footer: {
-    flexDirection: 'column',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginTop: 0,
-    gap: 8,
-  },
-  footerLinkContainer: {
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingVertical: 2,
-  },
-  footerLink: {
-    fontFamily: Fonts.openSans,
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors.textSecondary,
-    textAlign: 'left',
-    lineHeight: 18,
   },
   loadingOverlay: {
     flex: 1,

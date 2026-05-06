@@ -3,18 +3,22 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform, View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { HomeStack, AppointmentsStack, PrescriptionStack, NotificationsStack, ChatStack } from './HomeStack';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { HomeStack, AppointmentsStack, PrescriptionStack, NotificationsStack, SettingsStack } from './HomeStack';
 import Icons from '../assets/svg';
 import Colors from '../constants/colors';
 import Fonts from '../constants/fonts';
 import { useScrollContext } from '../contexts/ScrollContext';
+import { usePatientNotifications } from '../hooks/usePatientNotifications';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
 
 export type BottomTabParamList = {
   Home: undefined;
   Calendar: undefined;
   Prescription: undefined;
   Notifications: undefined;
-  Chat: undefined;
+  Settings: undefined;
 };
 
 const BottomTab = createBottomTabNavigator<BottomTabParamList>();
@@ -25,15 +29,31 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
   // Hooks must be called unconditionally before any early returns
   const { isScrollingDown } = useScrollContext();
   const translateY = useRef(new Animated.Value(0)).current;
+  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated);
+  const notificationsQuery = usePatientNotifications();
+  const unreadCount = isAuthenticated
+    ? (notificationsQuery.data ?? []).filter((n) => !n.isRead).length
+    : 0;
 
-  // Check if current screen is SessionJoined, AppointmentDetails, SelectService, or SelectDoctor - hide tab bar if true
+  // Hide tab bar only when the CURRENT focused nested route matches.
   const currentRoute = state.routes[state.index];
-  const currentRouteName = currentRoute?.name;
-  
-  // Check nested routes for SessionJoined, AppointmentDetails, SelectService, SelectDoctor, or DoctorDetails
-  const shouldHideTabBar = currentRoute?.state?.routes?.some(
-    (route: any) => route.name === 'JoinSession' || route.name === 'SessionJoined' || route.name === 'AppointmentDetails' || route.name === 'SelectService' || route.name === 'SelectDoctor' || route.name === 'DoctorDetails' || route.name === 'InboxChat'
-  ) || false;
+  const focusedNested =
+    getFocusedRouteNameFromRoute(currentRoute as any) ??
+    // Fallback for older state shapes
+    (currentRoute as any)?.state?.routes?.[(currentRoute as any)?.state?.index ?? 0]?.name;
+
+  const shouldHideTabBar = Boolean(
+    focusedNested &&
+      [
+        'JoinSession',
+        'SessionJoined',
+        'AppointmentDetails',
+        'SelectService',
+        'SelectDoctor',
+        'DoctorDetails',
+        'InboxChat',
+      ].includes(String(focusedNested)),
+  );
 
   // Animate tab bar based on scroll direction - must be called unconditionally
   useEffect(() => {
@@ -86,7 +106,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
               Calendar: 'AppointmentsMain',
               Prescription: 'PrescriptionMain',
               Notifications: 'NotificationsMain',
-              Chat: 'ChatMain',
+              Settings: 'SettingsMain',
             };
 
             const initialScreen = initialNestedScreenMap[route.name];
@@ -141,14 +161,8 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                   fill="#FFFFFF"
                 />
               );
-            case 'Chat':
-              return (
-                <Icons.Chat 
-                  {...iconProps}
-                  stroke="#FFFFFF"
-                  fill="none"
-                />
-              );
+            case 'Settings':
+              return <Icons.UserSettingsWhiteIcon {...iconProps} />;
             default:
               return null;
           }
@@ -172,7 +186,16 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
               {isFocused ? (
                 <>
                   <View style={styles.activeTabCircle}>
-                    {getIcon(true)}
+                    <View style={styles.iconWithBadge}>
+                      {getIcon(true)}
+                      {route.name === 'Notifications' && unreadCount > 0 ? (
+                        <View style={styles.tabBadge}>
+                          <Text style={styles.tabBadgeText} numberOfLines={1}>
+                            {unreadCount > 99 ? '99+' : String(unreadCount)}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                   <Text
                     style={[
@@ -188,7 +211,16 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
                 </>
               ) : (
                 <View style={styles.inactiveTabIcon}>
-                  {getIcon(false)}
+                  <View style={styles.iconWithBadge}>
+                    {getIcon(false)}
+                    {route.name === 'Notifications' && unreadCount > 0 ? (
+                      <View style={styles.tabBadge}>
+                        <Text style={styles.tabBadgeText} numberOfLines={1}>
+                          {unreadCount > 99 ? '99+' : String(unreadCount)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               )}
             </View>
@@ -248,10 +280,10 @@ export const BottomTabNavigator = () => {
         }}
       />
       <BottomTab.Screen
-        name="Chat"
-        component={ChatStack}
+        name="Settings"
+        component={SettingsStack}
         options={{
-          tabBarLabel: 'Chat',
+          tabBarLabel: 'Settings',
         }}
       />
     </BottomTab.Navigator>
@@ -336,6 +368,32 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconWithBadge: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  tabBadgeText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 12,
   },
   tabLabel: {
     fontFamily: Fonts.raleway,

@@ -26,6 +26,7 @@ export interface HomeUpcomingAppointmentCard {
   doctorName: string;
   doctorImageUri?: string;
   specialty: string;
+  appointmentCallType: 'CHAT' | 'AUDIO' | 'VIDEO';
   date: string;
   time: string;
   badgeLabel: string;
@@ -127,6 +128,13 @@ export function useHomeUpcomingAppointments() {
       if (!start) {
         continue;
       }
+      const rawCallType =
+        dq?.data?.appointment?.appointmentCallType ?? dq?.data?.appointment?.callType;
+      const appointmentCallType = (() => {
+        const t = String(rawCallType ?? '').trim().toUpperCase();
+        if (t === 'CHAT' || t === 'AUDIO' || t === 'VIDEO') return t;
+        return 'VIDEO';
+      })();
       if (new Date(start).getTime() < startOfToday) {
         continue;
       }
@@ -138,6 +146,7 @@ export function useHomeUpcomingAppointments() {
         doctorName: formatDoctorName(item.doctor),
         doctorImageUri: item.doctor?.image ?? undefined,
         specialty,
+        appointmentCallType,
         date,
         time,
         badgeLabel: apiStatusToBadge(item.status).label,

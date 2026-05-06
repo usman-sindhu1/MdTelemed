@@ -321,15 +321,8 @@ const BookApptBookingFlow: React.FC = () => {
     isError: subscriptionQueryError,
   } = usePatientSubscription(step === 3);
 
-  const subscriptionBadge = useMemo(() => {
-    if (subscriptionLoading) {
-      return 'Checking subscription…';
-    }
-    if (subscriptionQueryError || !subscriptionPayload) {
-      return 'No usable subscription';
-    }
-    const sub = subscriptionPayload;
-    const remaining = sub.remainingAppointments;
+  const subscriptionSnapshot = useMemo(() => {
+    const remaining = subscriptionPayload?.remainingAppointments;
     const remainingNum =
       typeof remaining === 'number'
         ? remaining
@@ -337,15 +330,39 @@ const BookApptBookingFlow: React.FC = () => {
           ? Number(remaining)
           : NaN;
     const usable =
-      sub.hasUsableSubscription === true ||
-      (sub.hasSubscription === true &&
+      subscriptionPayload?.hasUsableSubscription === true ||
+      (subscriptionPayload?.hasSubscription === true &&
         Number.isFinite(remainingNum) &&
         remainingNum > 0);
-    if (usable && Number.isFinite(remainingNum)) {
-      return `Included visits left: ${remainingNum}`;
+    return { usable, remainingNum };
+  }, [subscriptionPayload]);
+
+  const subscriptionBadge = useMemo(() => {
+    if (subscriptionLoading) {
+      return 'Checking subscription…';
+    }
+    if (subscriptionQueryError || !subscriptionPayload) {
+      return 'No usable subscription';
+    }
+    if (subscriptionSnapshot.usable && Number.isFinite(subscriptionSnapshot.remainingNum)) {
+      return `Included visits left: ${subscriptionSnapshot.remainingNum}`;
     }
     return 'No usable subscription';
-  }, [subscriptionLoading, subscriptionQueryError, subscriptionPayload]);
+  }, [
+    subscriptionLoading,
+    subscriptionQueryError,
+    subscriptionPayload,
+    subscriptionSnapshot.remainingNum,
+    subscriptionSnapshot.usable,
+  ]);
+
+  useEffect(() => {
+    if (step !== 3) return;
+    if (!subscriptionSnapshot.usable) return;
+    if (payTab !== 'subscription') {
+      setPayTab('subscription');
+    }
+  }, [payTab, step, subscriptionSnapshot.usable]);
 
   const exitFlow = useCallback(() => {
     if (mode === 'book_later' && selectedDoctor) {
@@ -928,40 +945,50 @@ const BookApptBookingFlow: React.FC = () => {
           <Text style={styles.badgeMutedText}>{subscriptionBadge}</Text>
         </View>
       </View>
-      <Text style={styles.subheading}>Choose how to pay</Text>
-      <TouchableOpacity
-        style={[styles.payOption, payTab === 'onetime' && styles.payOptionOn]}
-        onPress={() => setPayTab('onetime')}
-        activeOpacity={0.9}
-        disabled={createMut.isPending}
-      >
-        <Icons.ServiceIcon width={26} height={26} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.payOptionTitle}>One-time payment</Text>
-          <Text style={styles.payOptionSub}>Pay for this visit only</Text>
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.payOption, payTab === 'subscription' && styles.payOptionOn]}
-        onPress={() => setPayTab('subscription')}
-        activeOpacity={0.9}
-        disabled={createMut.isPending}
-      >
-        <Icons.CalendarClockIcon width={26} height={26} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.payOptionTitle}>Get subscription</Text>
-          <Text style={styles.payOptionSub}>
-            Uses subscription allowance when available ($90 checkout otherwise).
+      {!subscriptionSnapshot.usable ? (
+        <>
+          <Text style={styles.subheading}>Choose how to pay</Text>
+          <TouchableOpacity
+            style={[styles.payOption, payTab === 'onetime' && styles.payOptionOn]}
+            onPress={() => setPayTab('onetime')}
+            activeOpacity={0.9}
+            disabled={createMut.isPending}
+          >
+            <Icons.ServiceIcon width={26} height={26} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.payOptionTitle}>One-time payment</Text>
+              <Text style={styles.payOptionSub}>Pay for this visit only</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.payOption, payTab === 'subscription' && styles.payOptionOn]}
+            onPress={() => setPayTab('subscription')}
+            activeOpacity={0.9}
+            disabled={createMut.isPending}
+          >
+            <Icons.CalendarClockIcon width={26} height={26} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.payOptionTitle}>Get subscription</Text>
+              <Text style={styles.payOptionSub}>
+                Uses subscription allowance when available ($90 checkout otherwise).
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.autoApplyNote}>
+          <Text style={styles.autoApplyNoteText}>
+            Subscription is available — we’ll use it automatically for this visit.
           </Text>
         </View>
-      </TouchableOpacity>
+      )}
     </>
   );
 
   const primaryTitle =
     step === STEPS
-      ? 'Save draft & Continue to Payment'
-      : 'Save draft & continue';
+      ? 'Continue to Payment'
+      : 'Continue';
 
   return (
     <View style={styles.container}>
@@ -1274,6 +1301,21 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.openSans,
     fontSize: 13,
     color: '#64748B',
+  },
+  autoApplyNote: {
+    borderRadius: 14,
+    backgroundColor: '#EEEFF3',
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 6,
+  },
+  autoApplyNoteText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    lineHeight: 18,
   },
   dualActions: {
     flexDirection: 'row',

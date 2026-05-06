@@ -14,9 +14,11 @@ import ArrowRight from './Container.svg';
 import Home from './Home.svg';
 import Chat from './chat.svg';
 import Chat1Icon from './chat (1).svg';
+import ChatWhiteIcon from './chat-white.svg';
 import Calendar from './calendar.svg';
 import Calendar2Icon from './calendar (2).svg';
 import Notifications from './notifications.svg';
+import NotificationsBlackIcon from './notifications-black.svg';
 import Report from './Report.svg';
 import StarIcon from './Container (3).svg';
 import ServiceIcon from './service.svg';
@@ -47,6 +49,7 @@ import Vector6Icon from './Vector (6).svg';
 import Vector7Icon from './Vector (7).svg';
 import PasswordIcon from './Password.svg';
 import UserSettingsIcon from './user settings.svg';
+import UserSettingsWhiteIcon from './user-settings-white.svg';
 import ChevronDownIcon from './chevron down.svg';
 import Vector8Icon from './Vector (8).svg';
 import SentMessageIcon from './sent message.svg';
@@ -67,9 +70,11 @@ import SmilingFaceWithSmilingEyesIcon from './smiling-face-with-smiling-eyes.svg
 import SmilingFaceWithHeartEyesIcon from './smiling-face-with-heart-eyes.svg';
 import RelievedFaceIcon from './relieved-face.svg';
 import MedicineBottleIcon from './medicine-bottle.svg';
+import MedicineBottleWhiteIcon from './medicine-bottle-white.svg';
 import CertificateSolidIcon from './certificate-solid.svg';
 import BxTestTubeIcon from './bx-test-tube.svg';
 import ClipboardListSolidIcon from './clipboard-list-solid.svg';
+import ClipboardListSolidBlackIcon from './clipboard-list-solid-black.svg';
 import NestClockFarsightAnalogIcon from './nest_clock_farsight_analog.svg';
 import AllergyIcon from './allergy.svg';
 import DentistryIcon from './dentistry.svg';
@@ -112,9 +117,11 @@ const Icons = {
   Home,
   Chat,
   Chat1Icon,
+  ChatWhiteIcon,
   Calendar,
   Calendar2Icon,
   Notifications,
+  NotificationsBlackIcon,
   Report,
   StarIcon,
   ServiceIcon,
@@ -144,6 +151,7 @@ const Icons = {
   Vector7Icon,
   PasswordIcon,
   UserSettingsIcon,
+  UserSettingsWhiteIcon,
   SentMessageIcon,
   Ellipse106Icon,
   Ellipse107Icon,
@@ -164,9 +172,11 @@ const Icons = {
   SmilingFaceWithHeartEyesIcon,
   RelievedFaceIcon,
   MedicineBottleIcon,
+  MedicineBottleWhiteIcon,
   CertificateSolidIcon,
   BxTestTubeIcon,
   ClipboardListSolidIcon,
+  ClipboardListSolidBlackIcon,
   NestClockFarsightAnalogIcon,
   AllergyIcon,
   DentistryIcon,

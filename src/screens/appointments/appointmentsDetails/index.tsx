@@ -120,7 +120,11 @@ const AppointmentDetails: React.FC = () => {
     [chatMessages, currentUserId],
   );
 
-  const doctorChatUserId = detail?.doctor?.userId;
+  const doctorChatUserId =
+    (detail?.appointment as any)?.doctorUserId ??
+    (detail as any)?.doctorUserId ??
+    detail?.doctor?.userId ??
+    (detail?.doctor as any)?.id;
   const isDoctorOnline = isDoctorUserOnline(
     onlineQuery.data,
     doctorChatUserId,
@@ -164,6 +168,14 @@ const AppointmentDetails: React.FC = () => {
   });
 
   const handleBackPress = () => {
+    if (route.params?.source === 'home') {
+      // Ensure back returns to Home when opened from Home carousel.
+      const tabNav = navigation.getParent?.();
+      if (tabNav) {
+        (tabNav as any).navigate('Home', { screen: 'HomeMain' });
+        return;
+      }
+    }
     navigation.goBack();
   };
 
@@ -398,7 +410,15 @@ const AppointmentDetails: React.FC = () => {
                 messagesLoading={messagesQuery.isPending}
                 onSend={(text) => {
                   if (!appointmentId || chatInactive) return;
-                  sendMutation.mutate(text);
+                  sendMutation.mutate({ content: text, messageType: 'TEXT' });
+                }}
+                onSendAttachment={({ url, filename, kind }) => {
+                  if (!appointmentId || chatInactive) return;
+                  sendMutation.mutate({
+                    fileUrl: url,
+                    fileName: filename,
+                    messageType: kind === 'image' ? 'IMAGE' : 'FILE',
+                  });
                 }}
                 sendPending={sendMutation.isPending}
                 composerDisabled={chatInactive}

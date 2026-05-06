@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +15,7 @@ import InitialsAvatar from '../common/InitialsAvatar';
 import { useHomeUpcomingAppointments } from '../../hooks/useHomeUpcomingAppointments';
 
 const SKELETON_CARDS = 2;
+const CARD_HEIGHT = 164;
 
 const UpcommingAppointments: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -23,6 +23,33 @@ const UpcommingAppointments: React.FC = () => {
 
   const handleViewAll = () => {
     navigation.navigate('Calendar', { screen: 'AppointmentsMain' });
+  };
+
+  const navigateToAppointmentDetails = (appointmentId: string, initialTab?: 'Messages') => {
+    const tabNav = navigation.getParent?.();
+    if (tabNav) {
+      tabNav.navigate('Calendar', {
+        screen: 'AppointmentDetails',
+        params: { appointmentId, initialTab, source: 'home' },
+      });
+      return;
+    }
+    navigation.navigate('Calendar', {
+      screen: 'AppointmentDetails',
+      params: { appointmentId, initialTab, source: 'home' },
+    });
+  };
+
+  const callTypeLabel = (t: 'CHAT' | 'AUDIO' | 'VIDEO') => {
+    if (t === 'CHAT') return 'CHAT';
+    if (t === 'AUDIO') return 'AUDIO';
+    return 'VIDEO';
+  };
+
+  const primaryActionLabel = (t: 'CHAT' | 'AUDIO' | 'VIDEO') => {
+    if (t === 'CHAT') return 'Open Chat';
+    if (t === 'AUDIO') return 'Join Audio';
+    return 'Join Video';
   };
 
   return (
@@ -43,21 +70,38 @@ const UpcommingAppointments: React.FC = () => {
           {Array.from({ length: SKELETON_CARDS }).map((_, i) => (
             <View key={`sk-${i}`} style={styles.card}>
               <View style={styles.cardRow}>
-                <ShimmerBox width="30%" height={156} borderRadius={0} />
+                <ShimmerBox width="30%" height={CARD_HEIGHT} borderRadius={0} />
                 <View style={styles.cardRight}>
-                  <ShimmerBox height={18} borderRadius={8} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <ShimmerBox height={16} borderRadius={8} width="60%" />
+                    <ShimmerBox height={20} borderRadius={999} width={72} />
+                  </View>
                   <ShimmerBox
-                    height={14}
+                    height={12}
                     borderRadius={6}
-                    width="70%"
+                    width="45%"
                     style={{ marginTop: 8 }}
                   />
-                  <View style={styles.metaRow}>
-                    <View style={styles.datetimeWrap}>
-                      <ShimmerBox width={72} height={14} borderRadius={6} />
-                      <ShimmerBox width={72} height={14} borderRadius={6} />
+                  <ShimmerBox
+                    height={18}
+                    borderRadius={999}
+                    width={64}
+                    style={{ marginTop: 10 }}
+                  />
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-end',
+                      marginTop: 'auto',
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'column', gap: 8, flex: 1 }}>
+                      <ShimmerBox width={120} height={12} borderRadius={6} />
+                      <ShimmerBox width={92} height={12} borderRadius={6} />
                     </View>
-                    <ShimmerBox width={88} height={32} borderRadius={999} />
+                    <ShimmerBox width={108} height={36} borderRadius={999} />
                   </View>
                 </View>
               </View>
@@ -95,34 +139,49 @@ const UpcommingAppointments: React.FC = () => {
           contentContainerStyle={styles.cardsContainer}
         >
           {cards.map((appointment) => (
-            <View key={appointment.id} style={styles.card}>
+            <TouchableOpacity
+              key={appointment.id}
+              style={styles.card}
+              activeOpacity={0.7}
+              onPress={() => navigateToAppointmentDetails(appointment.id)}
+            >
               <View style={styles.cardRow}>
                 <View style={styles.imageShell}>
                   <InitialsAvatar
                     uri={appointment.doctorImageUri}
                     name={appointment.doctorName}
-                    size={156}
+                    size={CARD_HEIGHT}
                     borderRadius={0}
                     variant="first-letter"
                   />
                 </View>
 
                 <View style={styles.cardRight}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.doctorName} numberOfLines={1}>
-                      {appointment.doctorName}
-                    </Text>
-                    <View style={styles.statusPill}>
-                      <Text style={styles.statusText}>
-                        {appointment.badgeLabel}
+                  <View style={styles.topInfo}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.doctorName} numberOfLines={1}>
+                        {appointment.doctorName}
                       </Text>
+                      <View style={styles.statusPillUpcoming}>
+                        <Text style={styles.statusTextUpcoming}>
+                          {appointment.badgeLabel}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.specialty} numberOfLines={1}>
+                      {appointment.specialty}
+                    </Text>
+
+                    <View style={styles.callTypeRow}>
+                      <View style={styles.callTypePill}>
+                        <Text style={styles.callTypeText}>
+                          {callTypeLabel(appointment.appointmentCallType)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                  <Text style={styles.specialty} numberOfLines={1}>
-                    {appointment.specialty}
-                  </Text>
 
-                  <View style={styles.metaRow}>
+                  <View style={styles.bottomRow}>
                     <View style={styles.datetimeWrap}>
                       <View style={styles.detailItem}>
                         <Icons.CalendarTodayIcon width={18} height={18} />
@@ -137,10 +196,44 @@ const UpcommingAppointments: React.FC = () => {
                         </Text>
                       </View>
                     </View>
+
+                    <TouchableOpacity
+                      style={styles.joinBtn}
+                      activeOpacity={0.85}
+                      onPress={(e) => {
+                        (e as any)?.stopPropagation?.();
+                        if (appointment.appointmentCallType === 'CHAT') {
+                          navigateToAppointmentDetails(appointment.id, 'Messages');
+                          return;
+                        }
+                        const tabNav = navigation.getParent?.();
+                        if (tabNav) {
+                          tabNav.navigate('Calendar', {
+                            screen: 'JoinSession',
+                            params: {
+                              appointmentId: appointment.id,
+                              appointmentCallType: appointment.appointmentCallType,
+                            },
+                          });
+                          return;
+                        }
+                        navigation.navigate('Calendar', {
+                          screen: 'JoinSession',
+                          params: {
+                            appointmentId: appointment.id,
+                            appointmentCallType: appointment.appointmentCallType,
+                          },
+                        });
+                      }}
+                    >
+                      <Text style={styles.joinBtnText} numberOfLines={1}>
+                        {primaryActionLabel(appointment.appointmentCallType)}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
@@ -181,7 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEEFF3',
     borderRadius: 28,
     padding: 0,
-    height: 156,
+    height: CARD_HEIGHT,
     overflow: 'hidden',
   },
   cardRow: {
@@ -192,21 +285,25 @@ const styles = StyleSheet.create({
   cardRight: {
     flex: 1,
     minWidth: 0,
-    padding: 16,
-    justifyContent: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    justifyContent: 'space-between',
   },
   nameRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
-  metaRow: {
+  topInfo: {
+    minWidth: 0,
+  },
+  bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 'auto',
+    alignItems: 'flex-end',
     gap: 10,
+    marginTop: 10,
   },
   shimmerTextCol: {
     flex: 1,
@@ -257,32 +354,27 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
   },
-  bottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
   datetimeWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 8,
     flex: 1,
     minWidth: 0,
   },
-  statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginLeft: 10,
+  statusPillUpcoming: {
     alignSelf: 'flex-start',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#E8EEF9',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  statusText: {
+  statusTextUpcoming: {
     fontFamily: Fonts.raleway,
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textTransform: 'lowercase',
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+    textTransform: 'uppercase',
   },
   detailItem: {
     flexDirection: 'row',
@@ -296,6 +388,38 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#6B7280',
     flexShrink: 1,
+  },
+  callTypeRow: {
+    marginTop: 10,
+  },
+  callTypePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E8EEF9',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  callTypeText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+    textTransform: 'uppercase',
+  },
+  joinBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minWidth: 108,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinBtnText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   emptyCard: {
     width: '100%',

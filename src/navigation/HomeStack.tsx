@@ -24,6 +24,7 @@ import Prescription from '../screens/prescription';
 import Notifications from '../screens/notifications';
 import Chat from '../screens/chat';
 import InboxChat from '../screens/chat/InboxChat';
+import SettingsScreen from '../screens/settings';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
@@ -43,6 +44,8 @@ export type AppointmentsStackParamList = {
     | {
         appointmentId?: string;
         initialTab?: 'Appointment Info' | 'Doctor Info' | 'Prescriptions' | 'Messages';
+        /** Used to ensure back navigation returns to the origin screen. */
+        source?: 'home';
       }
     | undefined;
   PrescriptionDetails: { prescriptionId: string };
@@ -60,6 +63,10 @@ export type AppointmentsStackParamList = {
         channelName?: string;
         uid?: string;
         rtcToken?: string;
+        appId?: string;
+        expiresAt?: string;
+        startMuted?: boolean;
+        startVideoOn?: boolean;
       }
     | undefined;
   InSessionChat: { appointmentId?: string } | undefined;
@@ -95,6 +102,7 @@ const AppointmentsStackNavigator = createNativeStackNavigator<AppointmentsStackP
 const PrescriptionStackNavigator = createNativeStackNavigator<PrescriptionStackParamList>();
 const NotificationsStackNavigator = createNativeStackNavigator<NotificationsStackParamList>();
 const ChatStackNavigator = createNativeStackNavigator<ChatStackParamList>();
+const SettingsStackNavigator = createNativeStackNavigator();
 
 export const HomeStack = () => {
   return (
@@ -173,6 +181,18 @@ export const ChatStack = () => {
       <ChatStackNavigator.Screen name="ChatMain" component={Chat} />
       <ChatStackNavigator.Screen name="InboxChat" component={InboxChat} />
     </ChatStackNavigator.Navigator>
+  );
+};
+
+export const SettingsStack = () => {
+  return (
+    <SettingsStackNavigator.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <SettingsStackNavigator.Screen name="SettingsMain" component={SettingsScreen} />
+    </SettingsStackNavigator.Navigator>
   );
 };
 

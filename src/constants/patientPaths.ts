@@ -6,6 +6,10 @@ export const patientPaths = {
   appointments: `${PATIENT_API_PREFIX}/appointments`,
   appointmentById: (id: string) =>
     `${PATIENT_API_PREFIX}/appointments/${encodeURIComponent(id)}`,
+  notifications: `${PATIENT_API_PREFIX}/notifications`,
+  notificationReadById: (id: string) =>
+    `${PATIENT_API_PREFIX}/notifications/${encodeURIComponent(id)}/read`,
+  notificationsReadAll: `${PATIENT_API_PREFIX}/notifications/read-all`,
   therapistById: (doctorId: string) =>
     `${PATIENT_API_PREFIX}/therapists/${encodeURIComponent(doctorId)}`,
   /** Future bookable slots for scheduling (same filter as public timeslots). */

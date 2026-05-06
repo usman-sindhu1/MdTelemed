@@ -13,6 +13,11 @@ export interface AgoraTokenResponse {
   channelName?: string;
   uid?: string;
   role?: AgoraRole | string;
+  /**
+   * Optional: backend may choose to return Agora App ID to avoid hardcoding it
+   * in the mobile client. Client should still treat it as non-secret.
+   */
+  appId?: string;
   token: string;
   expiresAt?: string;
 }

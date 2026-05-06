@@ -2,6 +2,7 @@ import axios from 'axios';
 import { API_URL } from '../constants/BaseUrl';
 import { filesPaths } from '../constants/patientPaths';
 import { getData } from './storage';
+import { S3_SSE_PUT_HEADERS } from '../lib/s3-upload-headers';
 
 export type UploadUrlResponse = {
   uploadUrl: string;
@@ -22,6 +23,7 @@ function putFileToPresignedUrl(
   uploadUrl: string,
   contentType: string,
   fileName: string,
+  contentLengthBytes: number,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -41,7 +43,9 @@ function putFileToPresignedUrl(
       reject(new Error('Upload failed. Check your connection and try again.'));
     };
     xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('x-amz-server-side-encryption', S3_SSE_PUT_HEADERS['x-amz-server-side-encryption']);
     xhr.setRequestHeader('Content-Type', contentType);
+    xhr.setRequestHeader('Content-Length', String(contentLengthBytes));
     xhr.send({ uri: localUri, type: contentType, name: fileName } as never);
   });
 }
@@ -56,14 +60,19 @@ export async function uploadPickedReportFile(
 
   const fileName = picked.name || `report-${Date.now()}`;
   const fileType = picked.type || 'application/octet-stream';
+  const fileSizeBytes = picked.sizeBytes;
+  if (!Number.isFinite(fileSizeBytes) || (fileSizeBytes ?? 0) <= 0) {
+    throw new Error('Invalid file size. Please pick the file again.');
+  }
+  if ((fileSizeBytes ?? 0) > 25 * 1024 * 1024) {
+    throw new Error('This file is too large. Maximum upload size is 25 MB.');
+  }
 
   const payload: Record<string, unknown> = {
     fileName,
     fileType,
+    fileSizeBytes,
   };
-  if (typeof picked.sizeBytes === 'number' && Number.isFinite(picked.sizeBytes)) {
-    payload.fileSizeBytes = picked.sizeBytes;
-  }
 
   const res = await axios.post<{ data?: UploadUrlResponse; message?: string }>(
     `${API_URL}${filesPaths.uploadUrl}`,
@@ -83,7 +92,13 @@ export async function uploadPickedReportFile(
     throw new Error(res.data?.message || 'Invalid upload URL response.');
   }
 
-  await putFileToPresignedUrl(picked.uri, data.uploadUrl, fileType, fileName);
+  await putFileToPresignedUrl(
+    picked.uri,
+    data.uploadUrl,
+    fileType,
+    fileName,
+    fileSizeBytes as number,
+  );
 
   return { fileUrl: data.fileUrl };
 }

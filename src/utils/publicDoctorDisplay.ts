@@ -43,7 +43,8 @@ export function formatPlatformTenure(user: PublicDoctorUser | undefined): string
     0,
     Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000)),
   );
-  if (years <= 0) return '< 1 yr';
+  // Keep UI simple (avoid "<" in compact cards).
+  if (years <= 0) return '1 yr';
   return `${years} yr${years === 1 ? '' : 's'}`;
 }
 

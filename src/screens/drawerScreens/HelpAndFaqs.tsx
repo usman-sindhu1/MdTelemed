@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { DrawerActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SimpleBackHeader from '../../components/common/SimpleBackHeader';
 import Colors from '../../constants/colors';
@@ -83,7 +84,15 @@ const HelpAndFaqs: React.FC = () => {
   ];
 
   const handleBackPress = () => {
-    navigation.navigate('ProfileSettings');
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.dispatch(DrawerActions.closeDrawer());
+    (navigation as any).navigate('MainTabs', {
+      screen: 'Settings',
+      params: { screen: 'SettingsMain' },
+    });
   };
 
   const toggleItem = (id: string) => {

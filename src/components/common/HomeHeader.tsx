@@ -14,6 +14,7 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { RootState } from '../../store';
 import { useLocationDisplay } from '../../hooks/useLocationDisplay';
+import { usePatientNotifications } from '../../hooks/usePatientNotifications';
 import {
   getSavedAddress,
   getUserAvatarUri,
@@ -32,6 +33,8 @@ interface HomeHeaderProps {
   onNotificationPress?: () => void;
   showAIChatIcon?: boolean;
   showNotificationIcon?: boolean;
+  /** Overrides unread notification count badge. */
+  notificationCount?: number;
   onFeelingPress?: (index: number) => void;
   placeholder?: string;
   value?: string;
@@ -49,8 +52,9 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   onSearchChange,
   onAIChatPress,
   onNotificationPress,
-  showAIChatIcon = true,
+  showAIChatIcon = false,
   showNotificationIcon = true,
+  notificationCount,
   onFeelingPress,
   placeholder = 'Search doctor, service',
   value = '',
@@ -60,10 +64,12 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   showFeelingRow = true,
 }) => {
   const insets = useSafeAreaInsets();
+  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated);
   const authUser = useSelector(
     (s: RootState) => s.auth.user,
   ) as Record<string, unknown> | null;
   const { locationLine } = useLocationDisplay(getSavedAddress(authUser));
+  const notificationsQuery = usePatientNotifications();
 
   const userName = userNameOverride ?? getUserDisplayName(authUser);
   const userAddress = userAddressOverride ?? locationLine;
@@ -73,6 +79,13 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
       : getUserAvatarUri(authUser);
 
   const avatarInitial = (userName.trim() || 'U').charAt(0).toUpperCase();
+
+  const unreadCount =
+    typeof notificationCount === 'number'
+      ? notificationCount
+      : isAuthenticated
+        ? (notificationsQuery.data ?? []).filter((n) => !n.isRead).length
+        : 0;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
@@ -112,7 +125,6 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
               disabled={!onAIChatPress}
             >
               <Icons.AIChatIcon width={22} height={22} />
-              <View style={styles.redDot} />
             </TouchableOpacity>
           )}
           {showNotificationIcon && (
@@ -123,7 +135,13 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
               disabled={!onNotificationPress}
             >
               <Icons.NotificationBingIcon width={22} height={22} />
-              <View style={styles.redDot} />
+              {unreadCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText} numberOfLines={1}>
+                    {unreadCount > 99 ? '99+' : String(unreadCount)}
+                  </Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           )}
         </View>
@@ -275,6 +293,27 @@ const styles = StyleSheet.create({
     height: RED_DOT_SIZE,
     borderRadius: RED_DOT_SIZE / 2,
     backgroundColor: '#EF4444',
+  },
+  badge: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 12,
   },
   feelingRow: {
     flexDirection: 'row',
