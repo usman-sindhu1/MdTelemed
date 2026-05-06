@@ -591,13 +591,8 @@ const SessionJoined: React.FC = () => {
             ) : (
               <View style={styles.waitingBox}>
                 <Text style={styles.waitingTitle}>
-                  {joined ? 'Waiting for doctor…' : starting ? 'Connecting…' : 'Not connected'}
+                  Waiting for doctor…
                 </Text>
-                {!starting ? (
-                  <Text style={styles.waitingMeta}>
-                    {`uid=${localUid}  channel=${channelName || '—'}  appId=${(appIdFromRoute || AGORA_APP_ID).slice(0, 8)}…  exp=${expiresAt || '—'}`}
-                  </Text>
-                ) : null}
 
                 {joined && remoteUids.length === 0 && waitSeconds >= 20 ? (
                   <View style={styles.waitingActions}>
