@@ -33,12 +33,22 @@ export const signUpSchema = yup.object().shape({
     .email('Please enter a valid email address'),
   dateOfBirth: yup.string().optional().default(''),
   gender: yup.string().optional().default(''),
-  phone: yup.string().required('Phone number is required'),
+  phone: yup
+    .string()
+    .required('Phone number is required')
+    .test('e164', 'Phone number must include country code (e.g. +923001234567)', (value) => {
+      if (!value) return false;
+      const v = String(value).trim();
+      return /^\+\d{8,15}$/.test(v);
+    }),
   address: yup.string().optional().default(''),
   password: yup
     .string()
     .required('Password is required')
-    .min(6, 'Password must be at least 6 characters'),
+    .min(10, 'Password must be at least 10 characters')
+    .matches(/[A-Z]/, 'Password must include at least one uppercase letter')
+    .matches(/[a-z]/, 'Password must include at least one lowercase letter')
+    .matches(/[0-9]/, 'Password must include at least one number'),
   confirmPassword: yup
     .string()
     .required('Please confirm your password')

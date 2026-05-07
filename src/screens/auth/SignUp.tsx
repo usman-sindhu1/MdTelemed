@@ -6,7 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Linking,
+  Modal,
+  Pressable,
   Animated,
 } from 'react-native';
 import { showErrorToast } from '../../utils/appToast';
@@ -52,18 +53,164 @@ type SignupRequestBody = {
   acceptPrivacyPolicy?: boolean;
 };
 
+const toE164 = (value: string) => {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) return '';
+  const hasPlus = trimmed.startsWith('+');
+  const digitsOnly = trimmed.replace(/[^\d]/g, '');
+  return digitsOnly ? `${hasPlus ? '+' : '+'}${digitsOnly}` : '';
+};
+
+type LegalDocKind = 'terms' | 'privacy';
+
+const LEGAL_COPY: Record<
+  LegalDocKind,
+  {
+    title: string;
+    lastUpdated: string;
+    sections: { title: string; body: string; bullets?: string[] }[];
+  }
+> = {
+  terms: {
+    title: 'Terms & Conditions',
+    lastUpdated: 'Last updated: January 17, 2025',
+    sections: [
+      {
+        title: '1. Acceptance of Terms',
+        body:
+          'By accessing and using this application, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.',
+      },
+      {
+        title: '2. Use License',
+        body:
+          'Permission is granted to temporarily use this application for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:',
+        bullets: [
+          'Modify or copy the materials',
+          'Use the materials for any commercial purpose',
+          'Attempt to decompile or reverse engineer any software',
+          'Remove any copyright or other proprietary notations',
+        ],
+      },
+      {
+        title: '3. Medical Disclaimer',
+        body:
+          'The information provided through this application is for general informational purposes only and is not intended as a substitute for professional medical advice, diagnosis, or treatment.',
+      },
+      {
+        title: '4. User Account',
+        body:
+          'You are responsible for maintaining the confidentiality of your account and password. You agree to accept responsibility for all activities that occur under your account or password.',
+      },
+      {
+        title: '5. Privacy',
+        body:
+          'Your use of this application is also governed by our Privacy Policy. Please review our Privacy Policy to understand our practices.',
+      },
+      {
+        title: '6. Limitation of Liability',
+        body:
+          'In no event shall the application or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on the application.',
+      },
+      {
+        title: '7. Revisions',
+        body:
+          'The materials appearing on the application could include technical, typographical, or photographic errors. We may make changes to the materials contained on the application at any time without notice.',
+      },
+      {
+        title: '8. Contact Information',
+        body:
+          'If you have any questions about these Terms & Conditions, please contact us through the Contact Us section in the application.',
+      },
+    ],
+  },
+  privacy: {
+    title: 'Privacy & Security',
+    lastUpdated: 'Last updated: January 17, 2025',
+    sections: [
+      {
+        title: '1. Information We Collect',
+        body:
+          'We collect information that you provide directly to us, including when you create an account, make an appointment, use our services, or contact us for support.',
+        bullets: [
+          'Personal information (name, email, phone number)',
+          'Medical information (appointments, prescriptions, reports)',
+          'Payment information (processed securely through third-party providers)',
+          'Device information and usage data',
+        ],
+      },
+      {
+        title: '2. How We Use Your Information',
+        body:
+          'We use the information we collect to:',
+        bullets: [
+          'Provide, maintain, and improve our services',
+          'Process your appointments and medical requests',
+          'Send you notifications and updates',
+          'Respond to your inquiries and provide customer support',
+          'Detect, prevent, and address technical issues',
+        ],
+      },
+      {
+        title: '3. Information Sharing',
+        body:
+          'We do not sell, trade, or rent your personal information to third parties. We may share your information only in limited circumstances such as providing care, supporting services, legal requirements, or with your consent.',
+      },
+      {
+        title: '4. Data Security',
+        body:
+          'We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure.',
+      },
+      {
+        title: '5. Your Rights',
+        body: 'You have the right to:',
+        bullets: [
+          'Access and receive a copy of your personal data',
+          'Request correction of inaccurate information',
+          'Request deletion of your personal data',
+          'Object to processing of your personal data',
+          'Request restriction of processing',
+          'Data portability',
+        ],
+      },
+      {
+        title: '6. Cookies and Tracking',
+        body:
+          'We use cookies and similar tracking technologies to track activity on our application and hold certain information. You can instruct your device to refuse all cookies or to indicate when a cookie is being sent.',
+      },
+      {
+        title: "7. Children's Privacy",
+        body:
+          'Our services are not intended for children under the age of 18. We do not knowingly collect personal information from children under 18. If you are a parent or guardian and believe your child has provided us with personal information, please contact us.',
+      },
+      {
+        title: '8. Changes to This Policy',
+        body:
+          'We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy and updating the "Last updated" date.',
+      },
+      {
+        title: '9. Contact Us',
+        body:
+          'If you have any questions about this Privacy Policy, please contact us through the Contact Us section in the application.',
+      },
+    ],
+  },
+};
+
 const SignUp: React.FC = () => {
   const navigation = useNavigation<SignUpScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(''); // digits-only for the input field
+  const [phoneFormatted, setPhoneFormatted] = useState(''); // formatted with country code from PhoneInput
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [legalVisible, setLegalVisible] = useState(false);
+  const [legalKind, setLegalKind] = useState<LegalDocKind>('terms');
 
   const { onRequest, isPending } = useApi<SignupRequestBody>({
     method: 'post',
@@ -92,11 +239,12 @@ const SignUp: React.FC = () => {
     }
 
     if (touched[fieldName] && typeof value === 'string') {
+      const phoneE164 = toE164(phoneFormatted);
       const formData = {
         firstName,
         lastName,
         email,
-        phone,
+        phone: phoneE164,
         password,
         confirmPassword,
         agreeToTerms,
@@ -116,11 +264,12 @@ const SignUp: React.FC = () => {
 
   const handleFieldBlur = async (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
+    const phoneE164 = toE164(phoneFormatted);
     const formData = {
       firstName,
       lastName,
       email,
-      phone,
+      phone: phoneE164,
       password,
       confirmPassword,
       agreeToTerms,
@@ -151,13 +300,14 @@ const SignUp: React.FC = () => {
       agreeToTerms: true,
     });
 
+    const phoneE164 = toE164(phoneFormatted);
     const formData = {
       firstName,
       lastName,
       email,
       dateOfBirth: '',
       gender: '',
-      phone,
+      phone: phoneE164,
       address: '',
       password,
       confirmPassword,
@@ -176,11 +326,12 @@ const SignUp: React.FC = () => {
 
     setErrors({});
 
+    const finalPhone = toE164(phoneFormatted);
     const apiData: SignupRequestBody = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
-      phone: phone.trim(),
+      phone: finalPhone,
       password,
       role: 'PATIENT',
       timezone: getDeviceTimeZone(),
@@ -230,11 +381,13 @@ const SignUp: React.FC = () => {
   };
 
   const handleTermsLink = () => {
-    Linking.openURL('https://example.com/terms').catch(() => {});
+    setLegalKind('terms');
+    setLegalVisible(true);
   };
 
   const handlePrivacyLink = () => {
-    Linking.openURL('https://example.com/privacy').catch(() => {});
+    setLegalKind('privacy');
+    setLegalVisible(true);
   };
 
   return (
@@ -262,6 +415,50 @@ const SignUp: React.FC = () => {
           />
         </View>
         <SafeAreaView style={styles.container} edges={['top']}>
+          <Modal
+            visible={legalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setLegalVisible(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setLegalVisible(false)}>
+              <Pressable style={styles.modalCard} onPress={() => {}}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>{LEGAL_COPY[legalKind].title}</Text>
+                  <TouchableOpacity
+                    onPress={() => setLegalVisible(false)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.modalClose}
+                  >
+                    <Text style={styles.modalCloseText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView
+                  contentContainerStyle={styles.modalBody}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <Text style={styles.modalLastUpdated}>{LEGAL_COPY[legalKind].lastUpdated}</Text>
+                  {LEGAL_COPY[legalKind].sections.map((s, idx) => (
+                    <View key={`${legalKind}-${idx}`} style={styles.modalSection}>
+                      <Text style={styles.modalSectionTitle}>{s.title}</Text>
+                      <Text style={styles.modalSectionBody}>{s.body}</Text>
+                      {!!s.bullets?.length && (
+                        <View style={styles.modalBullets}>
+                          {s.bullets.map((b, i) => (
+                            <View key={`${legalKind}-${idx}-b-${i}`} style={styles.modalBulletRow}>
+                              <Text style={styles.modalBulletDot}>•</Text>
+                              <Text style={styles.modalBulletText}>{b}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
           <Animated.View
             style={[styles.backButton, { top: insets.top + 8, opacity: backButtonOpacity }]}
             pointerEvents={backButtonVisible ? 'box-none' : 'none'}
@@ -348,6 +545,7 @@ const SignUp: React.FC = () => {
                 <PhoneInput
                   value={phone}
                   onChangeText={(text) => handleFieldChange('phone', text)}
+                  onChangeFormattedText={(text) => setPhoneFormatted(text)}
                   placeholder="Write here"
                   error={errors.phone}
                   separateInputs
@@ -667,6 +865,98 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: PRIMARY,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: SURFACE_BASE,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+    maxHeight: '75%',
+    paddingBottom: 12,
+    width: '100%',
+  },
+  modalHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: INPUT_LABEL_COLOR,
+    flex: 1,
+  },
+  modalClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: PRIMARY,
+  },
+  modalBody: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+    gap: 14,
+  },
+  modalLastUpdated: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  modalSection: {
+    gap: 8,
+  },
+  modalSectionTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '800',
+    color: INPUT_LABEL_COLOR,
+  },
+  modalSectionBody: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  modalBullets: {
+    gap: 6,
+    paddingLeft: 2,
+  },
+  modalBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  modalBulletDot: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+    marginTop: 0,
+  },
+  modalBulletText: {
+    flex: 1,
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
 });
 

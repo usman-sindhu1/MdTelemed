@@ -65,6 +65,9 @@ export function DoctorProfileDetailCard({
     ? formatDoctorPlainName(profile)
     : bookingFallback!.name.trim();
 
+  const avatarInitial =
+    (plainName?.trim()?.[0] ?? 'D').toUpperCase();
+
   const imageUri = profile
     ? resolveDoctorImageUri(profile)
     : bookingFallback!.imageUri?.startsWith('http')
@@ -80,7 +83,9 @@ export function DoctorProfileDetailCard({
           resizeMode="cover"
         />
       ) : (
-        <View style={styles.heroPlaceholder} />
+        <View style={styles.heroPlaceholder}>
+          <Text style={styles.heroInitial}>{avatarInitial}</Text>
+        </View>
       )}
 
       <View style={styles.cardBody}>
@@ -215,6 +220,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
   },
   heroImage: {
     width: '100%',
@@ -225,6 +235,14 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 4 / 3,
     backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroInitial: {
+    fontFamily: Fonts.raleway,
+    fontSize: 52,
+    fontWeight: '800',
+    color: '#64748B',
   },
   heroShimmer: {
     alignSelf: 'stretch',

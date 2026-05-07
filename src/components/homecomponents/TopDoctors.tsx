@@ -21,6 +21,7 @@ import TopDoctorCard, {
 } from './TopDoctorCard';
 
 const TOP_DOCTOR_SKELETON_COUNT = 3;
+const HOME_TOP_DOCTORS_LIMIT = 2;
 
 const TopDoctors: React.FC = () => {
   const navigation =
@@ -49,13 +50,51 @@ const TopDoctors: React.FC = () => {
     })),
   });
 
-  const slotsByIndex = useMemo(() => {
+  const slotsMetaByIndex = useMemo(() => {
+    const now = Date.now();
     return doctorIds.map((_, i) => {
       const data = slotQueries[i]?.data;
-      const len = data?.timeSlots?.length ?? 0;
-      return len > 0;
+      const slots = data?.timeSlots ?? [];
+      let earliestUpcomingMs: number | null = null;
+      for (const s of slots) {
+        const start = s?.startDate ? Date.parse(s.startDate) : NaN;
+        if (!Number.isFinite(start)) continue;
+        if (start < now) continue;
+        if (earliestUpcomingMs === null || start < earliestUpcomingMs) {
+          earliestUpcomingMs = start;
+        }
+      }
+      return {
+        hasAnySlots: (slots?.length ?? 0) > 0,
+        earliestUpcomingMs,
+      };
     });
   }, [doctorIds, slotQueries]);
+
+  const rankedHomeList = useMemo(() => {
+    const entries = list
+      .map((profile, index) => {
+        const doctorId = profile.user?.id;
+        if (!doctorId) return null;
+        const meta = slotsMetaByIndex[index];
+        const slotsDone = slotQueries[index]?.isSuccess ?? false;
+        return {
+          doctorId,
+          profile,
+          index,
+          slotsDone,
+          hasAvailableSlots: Boolean(meta?.earliestUpcomingMs),
+          earliestUpcomingMs: meta?.earliestUpcomingMs ?? null,
+        };
+      })
+      .filter(
+        (x): x is NonNullable<typeof x> =>
+          Boolean(x && x.earliestUpcomingMs && x.earliestUpcomingMs > 0),
+      )
+      .sort((a, b) => (a.earliestUpcomingMs ?? 0) - (b.earliestUpcomingMs ?? 0));
+
+    return entries.slice(0, HOME_TOP_DOCTORS_LIMIT);
+  }, [list, slotQueries, slotsMetaByIndex]);
 
   return (
     <View style={styles.container}>
@@ -97,17 +136,13 @@ const TopDoctors: React.FC = () => {
         </View>
       ) : (
         <View style={styles.cardsWrap}>
-          {list.map((profile, index) => {
-            const doctorId = profile.user?.id;
-            if (!doctorId) return null;
-            const hasSlots = slotsByIndex[index];
-            const slotsDone = slotQueries[index]?.isSuccess ?? false;
+          {rankedHomeList.map(({ profile, doctorId, slotsDone, hasAvailableSlots }) => {
             return (
               <TopDoctorCard
                 key={doctorId}
                 profile={profile}
                 availabilityKnown={slotsDone}
-                hasAvailableSlots={hasSlots}
+                hasAvailableSlots={hasAvailableSlots}
                 onPress={() =>
                   navigation.navigate('HomeDoctorDetails', {
                     doctorId,

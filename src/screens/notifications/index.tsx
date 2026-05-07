@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,10 @@ const Notifications: React.FC = () => {
   const { setIsScrollingDown } = useScrollContext();
   const [activeFilter, setActiveFilter] = useState<UiTab>('All');
   const [search, setSearch] = useState('');
+  const [isScrollable, setIsScrollable] = useState(false);
+  const layoutHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
+  const lastYRef = useRef(0);
 
   const notificationsQuery = usePatientNotifications();
   const markRead = useMarkNotificationRead();
@@ -97,6 +101,17 @@ const Notifications: React.FC = () => {
     });
   }, [activeFilter, notificationsQuery.data, search]);
 
+  const updateScrollable = () => {
+    const layoutH = layoutHeightRef.current;
+    const contentH = contentHeightRef.current;
+    // small slack to avoid flicker when heights are close
+    const canScroll = contentH > layoutH + 8;
+    setIsScrollable(canScroll);
+    if (!canScroll) {
+      setIsScrollingDown(false);
+    }
+  };
+
   const getTypeStyle = (type: string) => {
     const tab = tabLabelFromType(type);
     if (tab === 'Appointment') return styles.typeAppointment;
@@ -119,8 +134,14 @@ const Notifications: React.FC = () => {
     return { date, time };
   };
 
-  const handleScrollStart = () => {
-    setIsScrollingDown(true);
+  const handleScroll = (y: number) => {
+    if (!isScrollable) return;
+    const prev = lastYRef.current;
+    const delta = y - prev;
+    // Ignore tiny jitter
+    if (Math.abs(delta) < 6) return;
+    setIsScrollingDown(delta > 0);
+    lastYRef.current = y;
   };
 
   const handleScrollStop = () => {
@@ -142,8 +163,16 @@ const Notifications: React.FC = () => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={handleScrollStart}
-          onMomentumScrollBegin={handleScrollStart}
+          onLayout={(e) => {
+            layoutHeightRef.current = e.nativeEvent.layout.height;
+            updateScrollable();
+          }}
+          onContentSizeChange={(_, h) => {
+            contentHeightRef.current = h;
+            updateScrollable();
+          }}
+          onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
           onScrollEndDrag={handleScrollStop}
           onMomentumScrollEnd={handleScrollStop}
           refreshControl={

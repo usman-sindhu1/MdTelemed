@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   shimmerBlock: {
-    gap: 16,
+    gap: 0,
     paddingHorizontal: 15,
   },
   shimmerTextCol: {

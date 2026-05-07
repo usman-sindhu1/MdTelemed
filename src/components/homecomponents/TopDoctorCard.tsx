@@ -10,6 +10,7 @@ import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import ShimmerBox from '../common/ShimmerBox';
 import type { PublicDoctorProfile } from '../../types/publicDoctors';
+import InitialsAvatar from '../common/InitialsAvatar';
 import {
   formatDoctorDisplayName,
   formatPlatformTenure,
@@ -58,11 +59,15 @@ const TopDoctorCard: React.FC<TopDoctorCardProps> = ({
     >
       <View style={styles.inner}>
         <View style={styles.topRow}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]} />
-          )}
+          <View style={styles.avatarWrap}>
+            <InitialsAvatar
+              uri={imageUri}
+              name={displayName}
+              size={56}
+              borderRadius={14}
+              variant="first-letter"
+            />
+          </View>
           <View style={styles.textCol}>
             <Text style={styles.name} numberOfLines={2}>
               {displayName}
@@ -237,6 +242,9 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  avatarWrap: {
+    marginRight: 12,
   },
   avatar: {
     width: 56,

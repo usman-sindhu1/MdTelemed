@@ -323,6 +323,8 @@ const styles = StyleSheet.create({
     height: '100%',
     overflow: 'hidden',
     backgroundColor: '#DDE3EA',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   profileImage: {
     width: '100%',

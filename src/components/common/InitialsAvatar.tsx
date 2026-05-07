@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import Fonts from '../../constants/fonts';
 
@@ -14,6 +14,8 @@ function normalizeNameTokens(name: string): string[] {
     'mrs.',
     'ms',
     'ms.',
+    'miss',
+    'miss.',
   ]);
   const filtered = raw.filter((t) => !honorifics.has(t.toLowerCase()));
   return filtered.length ? filtered : raw;
@@ -61,6 +63,7 @@ export default function InitialsAvatar({
 }: InitialsAvatarProps) {
   const cleanUri = typeof uri === 'string' ? uri.trim() : '';
   const hasUri = cleanUri.startsWith('http://') || cleanUri.startsWith('https://');
+  const [imageFailed, setImageFailed] = useState(false);
   const label = (name ?? '').trim();
   const text = useMemo(() => {
     return variant === 'first-letter'
@@ -70,18 +73,24 @@ export default function InitialsAvatar({
   const bg = useMemo(() => colorFromString(label || text), [label, text]);
   const r = borderRadius ?? Math.round(size / 4);
 
-  if (hasUri) {
+  const fontSize =
+    variant === 'first-letter'
+      ? Math.max(14, Math.round(size * 0.52))
+      : Math.max(12, Math.round(size * 0.34));
+
+  if (hasUri && !imageFailed) {
     return (
       <Image
         source={{ uri: cleanUri }}
         style={{ width: size, height: size, borderRadius: r }}
+        onError={() => setImageFailed(true)}
       />
     );
   }
 
   return (
     <View style={[styles.fallback, { width: size, height: size, borderRadius: r, backgroundColor: bg }]}>
-      <Text style={[styles.initials, { fontSize: Math.max(12, Math.round(size * 0.34)) }]}>
+      <Text style={[styles.initials, { fontSize }]}>
         {text}
       </Text>
     </View>

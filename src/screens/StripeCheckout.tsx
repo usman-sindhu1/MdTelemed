@@ -59,6 +59,21 @@ const StripeCheckout: React.FC = () => {
     );
   };
 
+  const looksLikeCheckoutFinished = (nextUrl: string): boolean => {
+    const u = nextUrl.toLowerCase();
+    // Common success / return markers (covers both your success_url and Stripe hosted "done" states)
+    if (u.includes('redirect_status=succeeded')) return true;
+    if (u.includes('payment_intent') && u.includes('succeeded')) return true;
+    if (/(^|[/?#])(success|succeeded|complete|completed|thank[_-]?you)([/?#]|$)/i.test(nextUrl)) {
+      return true;
+    }
+    // Common cancel markers
+    if (/(^|[/?#])(cancel|canceled|cancelled)([/?#]|$)/i.test(nextUrl)) {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <View style={styles.container}>
       <SimpleBackHeader
@@ -111,7 +126,20 @@ const StripeCheckout: React.FC = () => {
                 finishToAppointments();
                 return false;
               }
+              // Some Stripe configurations end on a Stripe-hosted "You're all done here" page.
+              // Detect typical success/cancel markers even if still on stripe.com.
+              if (looksLikeCheckoutFinished(nextUrl)) {
+                finishToAppointments();
+                return false;
+              }
               return true;
+            }}
+            onNavigationStateChange={(nav: { url?: string }) => {
+              const nextUrl = (nav?.url ?? '').trim();
+              if (!nextUrl) return;
+              if (isStripeUrl(nextUrl) && looksLikeCheckoutFinished(nextUrl)) {
+                finishToAppointments();
+              }
             }}
           />
           {loading ? (

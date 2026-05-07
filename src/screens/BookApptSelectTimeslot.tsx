@@ -133,6 +133,9 @@ const BookApptSelectTimeslot: React.FC = () => {
   const insets = useSafeAreaInsets();
   const selectedDoctor = route.params?.selectedDoctor;
   const source = route.params?.source;
+  const stripScrollRef = useRef<ScrollView>(null);
+  const stripViewportW = useRef(0);
+  const dayCellLayouts = useRef<Record<number, { x: number; width: number }>>({});
 
   const doctorUserId =
     selectedDoctor?.id != null ? String(selectedDoctor.id).trim() : undefined;
@@ -233,10 +236,29 @@ const BookApptSelectTimeslot: React.FC = () => {
     );
   };
 
+  const centerSelectedDayInStrip = useCallback(
+    (dateNum: number) => {
+      const layout = dayCellLayouts.current[dateNum];
+      const viewportW = stripViewportW.current;
+      if (!layout || !viewportW || !stripScrollRef.current) return;
+      const targetX = Math.max(0, layout.x + layout.width / 2 - viewportW / 2);
+      stripScrollRef.current.scrollTo({ x: targetX, animated: true });
+    },
+    [],
+  );
+
   const onSelectDay = (dateNum: number) => {
     setSelectedDate(new Date(year, month, dateNum));
     setSelectedSlotId(null);
+    requestAnimationFrame(() => centerSelectedDayInStrip(dateNum));
   };
+
+  useEffect(() => {
+    // When month changes or initial render, try to center the current selected day (if it is in the visible month)
+    if (selectedDate.getFullYear() !== year || selectedDate.getMonth() !== month) return;
+    const d = selectedDate.getDate();
+    requestAnimationFrame(() => centerSelectedDayInStrip(d));
+  }, [centerSelectedDayInStrip, month, selectedDate, year]);
 
   const handleContinue = () => {
     if (!selectedSlotId) {
@@ -351,9 +373,16 @@ const BookApptSelectTimeslot: React.FC = () => {
             </TouchableOpacity>
           </View>
           <ScrollView
+            ref={stripScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.stripDaysContent}
+            onLayout={(e) => {
+              stripViewportW.current = e.nativeEvent.layout.width;
+              if (selectedDate.getFullYear() === year && selectedDate.getMonth() === month) {
+                requestAnimationFrame(() => centerSelectedDayInStrip(selectedDate.getDate()));
+              }
+            }}
           >
             {stripDays.map((day) => {
               const selected = isSelectedDayCell(day.date);
@@ -368,6 +397,13 @@ const BookApptSelectTimeslot: React.FC = () => {
                     selected && styles.dayCellSelected,
                   ]}
                   onPress={() => onSelectDay(day.date)}
+                  onLayout={(e) => {
+                    const { x, width } = e.nativeEvent.layout;
+                    dayCellLayouts.current[day.date] = { x, width };
+                    if (selected) {
+                      requestAnimationFrame(() => centerSelectedDayInStrip(day.date));
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text

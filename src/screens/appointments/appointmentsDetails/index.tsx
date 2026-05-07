@@ -130,10 +130,13 @@ const AppointmentDetails: React.FC = () => {
     doctorChatUserId,
   );
 
-  const chatInactive = status === 'CANCELLED';
-  const chatComposerHint = chatInactive
-    ? 'Chat is not available for cancelled appointments.'
-    : undefined;
+  const chatInactive = status === 'CANCELLED' || status === 'COMPLETED';
+  const chatComposerHint =
+    status === 'CANCELLED'
+      ? 'Chat is not available for cancelled appointments.'
+      : status === 'COMPLETED'
+        ? 'Chat is disabled for completed appointments.'
+        : undefined;
 
   const scrollBottomPad = BOTTOM_ACTIONS_BLOCK + insets.bottom;
 
@@ -188,6 +191,10 @@ const AppointmentDetails: React.FC = () => {
   }, [detail?.appointment?.appointmentCallType, detail?.appointment?.callType]);
 
   const handleJoinSession = () => {
+    if (status === 'COMPLETED') {
+      Alert.alert('Appointment completed', 'Chat is disabled for completed appointments.');
+      return;
+    }
     if (normalizedCallType === 'CHAT') {
       setActiveTab('Messages');
       return;
@@ -304,7 +311,10 @@ const AppointmentDetails: React.FC = () => {
         {mainTabs.map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            style={[
+              styles.tab,
+              activeTab === tab && styles.tabActive,
+            ]}
             onPress={() => handleTabPress(tab)}
             onLayout={(e) => handleTabLayout(tab, e)}
             activeOpacity={0.7}
@@ -357,11 +367,15 @@ const AppointmentDetails: React.FC = () => {
           <Text style={styles.actionOutlinedText}>Leave Review</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.actionPrimary}
+          style={[
+            styles.actionPrimary,
+            status === 'COMPLETED' && styles.actionPrimaryDisabled,
+          ]}
           onPress={handleJoinSession}
           activeOpacity={0.85}
+          disabled={status === 'COMPLETED'}
         >
-          <Text style={styles.actionPrimaryText}>
+          <Text style={[styles.actionPrimaryText, status === 'COMPLETED' && styles.actionPrimaryTextDisabled]}>
             {normalizedCallType === 'CHAT' ? 'Open Chat' : 'Join Appointment'}
           </Text>
         </TouchableOpacity>
@@ -375,6 +389,7 @@ const AppointmentDetails: React.FC = () => {
       insets.bottom,
       normalizedCallType,
       pdfWorking,
+      status,
     ],
   );
 
@@ -403,6 +418,14 @@ const AppointmentDetails: React.FC = () => {
           <View style={styles.messagesLayout}>
             {titleBlock}
             <View style={styles.messagesFlex}>
+              {status === 'COMPLETED' ? (
+                <View style={styles.chatNote}>
+                  <Text style={styles.chatNoteTitle}>Chat closed</Text>
+                  <Text style={styles.chatNoteBody}>
+                    This appointment is completed, so you can view messages but can’t send new ones.
+                  </Text>
+                </View>
+              ) : null}
               <Conversation
                 doctorDisplayName={doctorDisplayName(detail?.doctor)}
                 isOnline={isDoctorOnline}
@@ -574,11 +597,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
+  actionPrimaryDisabled: {
+    opacity: 0.55,
+  },
   actionPrimaryText: {
     fontFamily: Fonts.raleway,
     fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  actionPrimaryTextDisabled: {
+    opacity: 0.75,
   },
   tabsScrollView: {
     marginBottom: 4,
@@ -609,6 +638,29 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#FFFFFF',
+  },
+  chatNote: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    marginBottom: 10,
+  },
+  chatNoteTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  chatNoteBody: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+    lineHeight: 18,
   },
   scrollView: {
     flex: 1,

@@ -140,7 +140,7 @@ function normalizeAuthUserToMePayload(authUser: unknown): PatientMePayload | nul
 }
 
 const STEPS = 3;
-const INPUT_LABEL_COLOR = Colors.primary ?? '#2563EB';
+const INPUT_LABEL_COLOR = '#111827';
 const PLACEHOLDER_COLOR = '#BDBDBD';
 const INPUT_SURFACE = '#FFFFFF';
 
@@ -701,7 +701,7 @@ const BookApptBookingFlow: React.FC = () => {
           <Text style={[styles.selectText, !bookingFor && styles.selectPlaceholder]}>
             {bookingFor || 'Write here'}
           </Text>
-          <Text style={styles.chev}>▾</Text>
+          <Icons.ChevronDownIcon width={18} height={18} />
         </TouchableOpacity>
         {bookingForOpen ? (
           <View style={styles.dropdown}>
@@ -789,7 +789,7 @@ const BookApptBookingFlow: React.FC = () => {
           <Text style={[styles.selectText, !priority && styles.selectPlaceholder]}>
             {priority || 'Write here'}
           </Text>
-          <Text style={styles.chev}>▾</Text>
+          <Icons.ChevronDownIcon width={18} height={18} />
         </TouchableOpacity>
         {priorityOpen ? (
           <View style={styles.dropdown}>
@@ -830,7 +830,7 @@ const BookApptBookingFlow: React.FC = () => {
             >
               {someoneGender || 'Write here'}
             </Text>
-            <Text style={styles.chev}>▾</Text>
+            <Icons.ChevronDownIcon width={18} height={18} />
           </TouchableOpacity>
           {genderOpen ? (
             <View style={styles.dropdown}>
@@ -885,7 +885,9 @@ const BookApptBookingFlow: React.FC = () => {
         activeOpacity={0.85}
         disabled={reportUploading}
       >
-        <Icons.Report width={22} height={22} />
+        <View style={styles.uploadIconWrap}>
+          <Icons.IconUpload24px width={26} height={26} />
+        </View>
         <Text style={styles.uploadBtnText}>
           {reportUploading
             ? 'Uploading…'
@@ -1083,6 +1085,7 @@ const styles = StyleSheet.create({
   },
   inputSurface: {
     backgroundColor: INPUT_SURFACE,
+    borderColor: '#E5E7EB',
   },
   phoneFieldWrapper: {
     width: '100%',
@@ -1137,7 +1140,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: Colors.inputBorder,
+    borderColor: '#E5E7EB',
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1170,13 +1173,13 @@ const styles = StyleSheet.create({
     color: '#B45309',
     paddingHorizontal: 4,
   },
-  selectPlaceholder: { color: PLACEHOLDER_COLOR },
-  chev: { fontSize: 14, color: PLACEHOLDER_COLOR, marginLeft: 8 },
+  selectPlaceholder: { color: '#94A3B8' },
+  chev: { marginLeft: 8 },
   dropdown: {
     marginTop: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.inputBorder,
+    borderColor: '#E5E7EB',
     overflow: 'hidden',
     backgroundColor: INPUT_SURFACE,
   },
@@ -1192,23 +1195,44 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   uploadBtn: {
-    flexDirection: 'row',
+    width: 170,
+    height: 120,
+    alignSelf: 'flex-start',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 12,
-    borderRadius: 14,
+    justifyContent: 'center',
+    gap: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.primary ?? '#2563EB',
-    padding: 14,
-    backgroundColor: '#F8FAFC',
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
     marginBottom: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  uploadIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   uploadBtnText: {
-    flex: 1,
     fontFamily: Fonts.raleway,
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '600',
     color: Colors.primary ?? '#2563EB',
+    lineHeight: 16,
+    textAlign: 'center',
   },
   tabRow: {
     flexDirection: 'row',
@@ -1220,15 +1244,25 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 88,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   tabPillActive: {
     borderColor: Colors.primary ?? '#2563EB',
     backgroundColor: '#ECF2FD',
+    shadowColor: Colors.primary ?? '#2563EB',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 4,
   },
   tabPillText: {
     fontFamily: Fonts.raleway,
@@ -1237,7 +1271,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   tabPillTextActive: {
-    color: '#1D4ED8',
+    color: Colors.primary ?? '#2563EB',
+    fontWeight: '800',
   },
   summaryCard: {
     borderRadius: 16,
@@ -1333,6 +1368,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
   },
   btnGhostText: {
     fontFamily: Fonts.raleway,
@@ -1348,6 +1388,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
+    shadowColor: Colors.primary ?? '#2563EB',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 4,
   },
   btnPrimaryText: {
     fontFamily: Fonts.raleway,
