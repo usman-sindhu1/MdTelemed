@@ -55,6 +55,39 @@ const RatingsAndReviews: React.FC = () => {
     [listQuery.data?.pages],
   );
 
+  const filteredRows = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const doc = r.doctor ?? r.appointment?.doctorUser ?? null;
+      const docName = `${doc?.firstName ?? ''} ${doc?.lastName ?? ''}`.trim();
+      const comment = String(r.rating?.comment ?? '').trim();
+      const createdAt = r.rating?.createdAt ? new Date(r.rating.createdAt) : null;
+      const dateLabel = createdAt
+        ? createdAt.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      const timeLabel = createdAt
+        ? createdAt.toLocaleTimeString(undefined, {
+            hour: 'numeric',
+            minute: '2-digit',
+          })
+        : '';
+
+      const hay = [docName, comment, dateLabel, timeLabel]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [debouncedSearch, rows]);
+
+  const isSearchEmpty =
+    debouncedSearch.trim().length > 0 && filteredRows.length === 0;
+
   const listPagination = useMemo(() => {
     const pages = listQuery.data?.pages;
     if (!pages?.length) return null;
@@ -110,12 +143,23 @@ const RatingsAndReviews: React.FC = () => {
         </Text>
       );
     }
+    if (isSearchEmpty) {
+      return (
+        <Text style={styles.emptyText}>
+          No reviews match your search.
+        </Text>
+      );
+    }
     return (
-      <Text style={styles.emptyText}>
-        {debouncedSearch
-          ? 'No reviews match your search.'
-          : 'No reviews yet.'}
-      </Text>
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyIconCircle}>
+          <Icons.StarFill1Icon width={28} height={28} />
+        </View>
+        <Text style={styles.emptyTitle}>No reviews yet</Text>
+        <Text style={styles.emptySubtitle}>
+          After you complete an appointment, you can leave a review and it will show up here.
+        </Text>
+      </View>
     );
   };
 
@@ -136,7 +180,7 @@ const RatingsAndReviews: React.FC = () => {
       </View>
 
       <FlatList
-        data={rows}
+        data={filteredRows}
         keyExtractor={(item) => item.rating.id}
         renderItem={renderItem}
         contentContainerStyle={[
@@ -169,7 +213,7 @@ const RatingsAndReviews: React.FC = () => {
         ListEmptyComponent={emptyComponent}
         ListFooterComponent={
           <ListPaginationFooter
-            loadedCount={rows.length}
+            loadedCount={filteredRows.length}
             pagination={listPagination}
             hasNextPage={listQuery.hasNextPage}
             isFetchingNextPage={listQuery.isFetchingNextPage}
@@ -282,6 +326,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
     paddingVertical: 24,
+  },
+  emptyCard: {
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
   },
 });
 

@@ -53,6 +53,27 @@ const HomeDoctorsList: React.FC = () => {
     [listQuery.data?.pages],
   );
 
+  const filteredRows = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((d) => {
+      const u = d.user as any;
+      const first = String(u?.firstName ?? '').trim();
+      const last = String(u?.lastName ?? '').trim();
+      const email = String(u?.email ?? '').trim();
+      const category = String((d as any)?.category?.name ?? '').trim();
+      const specialty = String((d as any)?.speciality ?? (d as any)?.specialty ?? '').trim();
+      const hay = [first, last, email, category, specialty]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [debouncedSearch, rows]);
+
+  const isSearchEmpty =
+    debouncedSearch.trim().length > 0 && filteredRows.length === 0;
+
   const listPagination = useMemo(() => {
     const pages = listQuery.data?.pages;
     if (!pages?.length) return null;
@@ -103,7 +124,9 @@ const HomeDoctorsList: React.FC = () => {
       );
     }
     return (
-      <Text style={styles.emptyText}>No doctors match your search.</Text>
+      <Text style={styles.emptyText}>
+        {isSearchEmpty ? 'No doctors match your search.' : 'No doctors found.'}
+      </Text>
     );
   };
 
@@ -124,7 +147,7 @@ const HomeDoctorsList: React.FC = () => {
       </View>
 
       <FlatList
-        data={rows}
+        data={filteredRows}
         keyExtractor={(item, index) => item.user?.id ?? `row-${index}`}
         renderItem={renderItem}
         contentContainerStyle={[
@@ -157,7 +180,7 @@ const HomeDoctorsList: React.FC = () => {
         ListEmptyComponent={emptyComponent}
         ListFooterComponent={
           <ListPaginationFooter
-            loadedCount={rows.length}
+            loadedCount={filteredRows.length}
             pagination={listPagination}
             hasNextPage={listQuery.hasNextPage}
             isFetchingNextPage={listQuery.isFetchingNextPage}

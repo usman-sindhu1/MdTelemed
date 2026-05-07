@@ -83,6 +83,8 @@ const Appointments: React.FC = () => {
 
   const [selectedTab, setSelectedTab] = useState<AppointmentsTab>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const tabBarScrollRef = useRef<ScrollView>(null);
   const tabMeasurements = useRef<
     Partial<Record<AppointmentsTab, { x: number; width: number }>>
@@ -131,6 +133,11 @@ const Appointments: React.FC = () => {
   } = usePatientAppointmentsList(selectedTab);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
     return () => {
       setIsScrollingDown(false);
     };
@@ -141,8 +148,28 @@ const Appointments: React.FC = () => {
   };
 
   const handleSearchChange = (text: string) => {
-    console.log('Search text:', text);
+    setSearchInput(text);
   };
+
+  const filteredRows = (() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      const hay = [
+        r.doctorName,
+        r.specialty,
+        r.date,
+        r.time,
+        r.badgeLabel,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  })();
+
+  const isSearchEmpty = debouncedSearch.trim().length > 0 && filteredRows.length === 0;
 
   const handleAIChatPress = () => {
     const tabNavigation = navigation.getParent();
@@ -315,7 +342,8 @@ const Appointments: React.FC = () => {
           onSearchChange={handleSearchChange}
           onAIChatPress={handleAIChatPress}
           onNotificationPress={handleNotificationPress}
-          placeholder="Search doctor, service"
+          placeholder="Search name, date, time..."
+          value={searchInput}
           showFeelingRow={false}
         />
       </View>
@@ -432,7 +460,7 @@ const Appointments: React.FC = () => {
           </ScrollView>
         ) : (
           <FlatList
-            data={rows}
+            data={filteredRows}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             ListHeaderComponent={ListHeader}
@@ -460,12 +488,18 @@ const Appointments: React.FC = () => {
                   )}
                 </View>
                 <Text style={styles.emptyStateTitle}>
-                  {isError ? 'Could not load appointments' : 'No appointments'}
+                  {isError
+                    ? 'Could not load appointments'
+                    : isSearchEmpty
+                      ? 'No results'
+                      : 'No appointments'}
                 </Text>
                 <Text style={styles.emptyStateText}>
                   {isError
                     ? 'Pull down to refresh, or check your connection and try again.'
-                    : EMPTY_COPY[selectedTab]}
+                    : isSearchEmpty
+                      ? 'Try a different name, date, or time.'
+                      : EMPTY_COPY[selectedTab]}
                 </Text>
               </View>
             }

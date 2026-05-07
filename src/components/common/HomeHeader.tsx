@@ -29,6 +29,7 @@ const RED_DOT_SIZE = 10;
 interface HomeHeaderProps {
   onProfilePress?: () => void;
   onSearchChange?: (text: string) => void;
+  onSearchPress?: () => void;
   onAIChatPress?: () => void;
   onNotificationPress?: () => void;
   showAIChatIcon?: boolean;
@@ -38,6 +39,7 @@ interface HomeHeaderProps {
   onFeelingPress?: (index: number) => void;
   placeholder?: string;
   value?: string;
+  searchEditable?: boolean;
   /** Overrides session name from Redux (`auth.user`). */
   userName?: string;
   /** Overrides resolved location (GPS → saved profile address). */
@@ -45,11 +47,18 @@ interface HomeHeaderProps {
   /** Overrides avatar URL from session; pass `null` to hide photo. */
   profileImageUri?: string | null;
   showFeelingRow?: boolean;
+  /** When provided, shows a "Mood" summary row (submitted today). */
+  moodSummary?: {
+    moodLabel: string;
+    moodEmoji: string;
+    resetInMinutes: number;
+  } | null;
 }
 
 const HomeHeader: React.FC<HomeHeaderProps> = ({
   onProfilePress,
   onSearchChange,
+  onSearchPress,
   onAIChatPress,
   onNotificationPress,
   showAIChatIcon = false,
@@ -58,10 +67,12 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
   onFeelingPress,
   placeholder = 'Search doctor, service',
   value = '',
+  searchEditable = true,
   userName: userNameOverride,
   userAddress: userAddressOverride,
   profileImageUri: profileImageOverride,
   showFeelingRow = true,
+  moodSummary = null,
 }) => {
   const insets = useSafeAreaInsets();
   const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated);
@@ -87,10 +98,18 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
         ? (notificationsQuery.data ?? []).filter((n) => !n.isRead).length
         : 0;
 
+  const hasMoodSummary = Boolean(moodSummary);
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+    <View
+      style={[
+        styles.container,
+        hasMoodSummary ? styles.containerCompact : null,
+        { paddingTop: insets.top + 16 },
+      ]}
+    >
       {/* Top row: Profile + Name + Address | AI Chat + Notification */}
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, hasMoodSummary ? styles.topRowCompact : null]}>
         <TouchableOpacity
           style={styles.profileSection}
           onPress={onProfilePress}
@@ -148,7 +167,21 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
       </View>
 
       {/* Feeling row */}
-      {showFeelingRow && (
+      {moodSummary ? (
+        <View style={styles.moodBlock}>
+          <View style={styles.moodRow}>
+            <Text style={styles.moodTitle}>Mood</Text>
+            <View style={styles.moodPill}>
+              <Text style={styles.moodPillText} numberOfLines={1}>
+                Today: {moodSummary.moodEmoji} {moodSummary.moodLabel}
+              </Text>
+              <Text style={styles.moodResetText} numberOfLines={1}>
+                Reset in {moodSummary.resetInMinutes} min
+              </Text>
+            </View>
+          </View>
+        </View>
+      ) : showFeelingRow ? (
         <View style={styles.feelingRow}>
           <Text style={styles.feelingText}>How are you feeling today?</Text>
           <View style={styles.emojiRow}>
@@ -175,10 +208,15 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      ) : null}
 
       {/* Search bar */}
-      <View style={styles.searchWrap}>
+      <TouchableOpacity
+        style={styles.searchWrap}
+        activeOpacity={onSearchPress ? 0.85 : 1}
+        onPress={onSearchPress}
+        disabled={!onSearchPress}
+      >
         <Icons.Search width={20} height={20} />
         <TextInput
           style={styles.searchInput}
@@ -186,9 +224,10 @@ const HomeHeader: React.FC<HomeHeaderProps> = ({
           placeholderTextColor="#9CA3AF"
           value={value}
           onChangeText={onSearchChange}
-          editable={true}
+          editable={searchEditable}
+          pointerEvents={onSearchPress && !searchEditable ? 'none' : 'auto'}
         />
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -203,11 +242,17 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
     overflow: 'hidden',
   },
+  containerCompact: {
+    paddingBottom: 14,
+  },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
+  },
+  topRowCompact: {
+    marginBottom: 12,
   },
   profileSection: {
     flexDirection: 'row',
@@ -320,6 +365,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  moodBlock: {
+    marginBottom: 16,
+    gap: 6,
+  },
+  moodTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  moodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 12,
+  },
+  moodPill: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  moodPillText: {
+    fontFamily: Fonts.raleway,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    flexShrink: 1,
+  },
+  moodResetText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: '#94A3B8',
   },
   feelingText: {
     fontFamily: Fonts.raleway,

@@ -53,6 +53,53 @@ const Invoices: React.FC = () => {
     [listQuery.data?.pages],
   );
 
+  const filteredRows = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return rows;
+
+    return rows.filter((r) => {
+      const p = r.payment;
+      const doc = r.doctor ?? r.appointment?.doctorUser ?? null;
+      const docName = `${doc?.firstName ?? ''} ${doc?.lastName ?? ''}`.trim();
+      const docEmail = String(doc?.email ?? '').trim();
+      const createdAt = p?.createdAt ? new Date(p.createdAt) : null;
+      const dateLabel = createdAt
+        ? createdAt.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      const timeLabel = createdAt
+        ? createdAt.toLocaleTimeString(undefined, {
+            hour: 'numeric',
+            minute: '2-digit',
+          })
+        : '';
+
+      const hay = [
+        p?.id,
+        p?.stripePaymentId,
+        p?.stripeIntentId,
+        p?.status,
+        p?.currency,
+        String(p?.amount ?? ''),
+        docName,
+        docEmail,
+        dateLabel,
+        timeLabel,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return hay.includes(q);
+    });
+  }, [debouncedSearch, rows]);
+
+  const isSearchEmpty =
+    debouncedSearch.trim().length > 0 && filteredRows.length === 0;
+
   const listPagination = useMemo(() => {
     const pages = listQuery.data?.pages;
     if (!pages?.length) return null;
@@ -107,12 +154,23 @@ const Invoices: React.FC = () => {
         </Text>
       );
     }
+    if (isSearchEmpty) {
+      return (
+        <Text style={styles.emptyText}>
+          No payments match your search.
+        </Text>
+      );
+    }
     return (
-      <Text style={styles.emptyText}>
-        {debouncedSearch
-          ? 'No payments match your search.'
-          : 'No payments yet.'}
-      </Text>
+      <View style={styles.emptyCard}>
+        <View style={styles.emptyIconCircle}>
+          <Icons.LocalAtmIcon width={28} height={28} />
+        </View>
+        <Text style={styles.emptyTitle}>No payments yet</Text>
+        <Text style={styles.emptySubtitle}>
+          Your billing history will appear here after your first completed payment.
+        </Text>
+      </View>
     );
   };
 
@@ -133,7 +191,7 @@ const Invoices: React.FC = () => {
       </View>
 
       <FlatList
-        data={rows}
+        data={filteredRows}
         keyExtractor={(item) => item.payment.id}
         renderItem={renderItem}
         contentContainerStyle={[
@@ -166,7 +224,7 @@ const Invoices: React.FC = () => {
         ListEmptyComponent={emptyComponent}
         ListFooterComponent={
           <ListPaginationFooter
-            loadedCount={rows.length}
+            loadedCount={filteredRows.length}
             pagination={listPagination}
             hasNextPage={listQuery.hasNextPage}
             isFetchingNextPage={listQuery.isFetchingNextPage}
@@ -273,6 +331,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
     paddingVertical: 24,
+  },
+  emptyCard: {
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
   },
 });
 

@@ -199,7 +199,15 @@ const MedicalInfo: React.FC = () => {
               ))}
 
               {reports.length === 0 && !globalReason?.trim() ? (
-                <Text style={styles.emptyText}>No reports yet.</Text>
+                <View style={styles.emptyCard}>
+                  <View style={styles.emptyIconCircle}>
+                    <Icons.Report width={28} height={28} />
+                  </View>
+                  <Text style={styles.emptyTitle}>No reports yet</Text>
+                  <Text style={styles.emptySubtitle}>
+                    When reports are added to your account, they’ll appear here for quick access.
+                  </Text>
+                </View>
               ) : null}
             </>
           )}
@@ -367,6 +375,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 32,
     paddingHorizontal: 16,
+  },
+  emptyCard: {
+    width: '100%',
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.openSans,
+    fontSize: 13,
+    fontWeight: '400',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
   },
   errorText: {
     fontFamily: Fonts.openSans,

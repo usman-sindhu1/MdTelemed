@@ -16,14 +16,17 @@ import Video from 'react-native-video';
 import HomeHeader from '../../components/common/HomeHeader';
 import UpcommingAppointments from '../../components/homecomponents/UpcommingAppointments';
 import TopDoctors from '../../components/homecomponents/TopDoctors';
+import GlobalSearchModal from '../../components/search/GlobalSearchModal';
 import Icons from '../../assets/svg';
 import Colors from '../../constants/colors';
 import Fonts from '../../constants/fonts';
 import { useScrollContext } from '../../contexts/ScrollContext';
 import { invalidatePatientAppointmentCaches } from '../../hooks/useHomeUpcomingAppointments';
+import { useCreateTodayMood, usePatientMoodEntries, type PatientMoodValue } from '../../hooks/usePatientMood';
 import type { RootState } from '../../store';
 import { getData, storeData } from '../../utils/storage';
 import { getUserEmail } from '../../utils/profileDisplay';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
 
 const Home: React.FC = () => {
   const navigation = useNavigation();
@@ -31,6 +34,7 @@ const Home: React.FC = () => {
   const { setIsScrollingDown } = useScrollContext();
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
 
   const authUser = useSelector(
     (s: RootState) => s.auth.user,
@@ -95,6 +99,67 @@ const Home: React.FC = () => {
     console.log('Search text:', text);
   };
 
+  const openGlobalSearch = () => {
+    setGlobalSearchOpen(true);
+  };
+
+  const moodQuery = usePatientMoodEntries(Boolean(authUser), 14);
+  const createMood = useCreateTodayMood();
+  const [moodTick, setMoodTick] = useState(0);
+
+  const moodLocked = useMemo(() => {
+    const latest = moodQuery.data?.latest;
+    if (!latest?.createdAt) return false;
+    const ms = Date.parse(latest.createdAt);
+    if (!Number.isFinite(ms)) return false;
+    return Date.now() - ms < 24 * 60 * 60 * 1000;
+  }, [moodQuery.data?.latest]);
+
+  useEffect(() => {
+    if (!moodLocked) return;
+    const t = setInterval(() => setMoodTick((x) => x + 1), 60_000);
+    return () => clearInterval(t);
+  }, [moodLocked]);
+
+  const moodUi = useMemo(() => {
+    if (!moodLocked) return null;
+    const latest = moodQuery.data?.latest;
+    if (!latest?.createdAt || !latest?.mood) return null;
+    const createdMs = Date.parse(latest.createdAt);
+    if (!Number.isFinite(createdMs)) return null;
+    const resetAt = createdMs + 24 * 60 * 60 * 1000;
+    const mins = Math.max(0, Math.ceil((resetAt - Date.now()) / 60000));
+    const mood = latest.mood;
+    const moodLabel =
+      mood === 'GREAT'
+        ? 'Great'
+        : mood === 'GOOD'
+          ? 'Good'
+          : mood === 'OKAY'
+            ? 'Okay'
+            : mood === 'BAD'
+              ? 'Bad'
+              : 'Awful';
+    const moodEmoji =
+      mood === 'GREAT'
+        ? '😍'
+        : mood === 'GOOD'
+          ? '😊'
+          : mood === 'OKAY'
+            ? '🙂'
+            : mood === 'BAD'
+              ? '😕'
+              : '😞';
+    return { moodLabel, moodEmoji, resetInMinutes: mins };
+  }, [moodLocked, moodQuery.data?.latest, moodTick]);
+
+  const moodFromIndex = (index: number): PatientMoodValue => {
+    // Map the 3 emojis to 3 moods (kept simple; can be expanded later).
+    if (index === 0) return 'OKAY';
+    if (index === 1) return 'GREAT';
+    return 'GOOD';
+  };
+
   const handleAIChatPress = () => {
     const tabNavigation = navigation.getParent();
     if (tabNavigation) {
@@ -114,7 +179,21 @@ const Home: React.FC = () => {
   };
 
   const handleFeelingPress = (index: number) => {
-    console.log('Feeling emoji pressed:', index);
+    if (moodLocked || createMood.isPending) {
+      return;
+    }
+    createMood.mutate(
+      { mood: moodFromIndex(index) },
+      {
+        onSuccess: () => {
+          showSuccessToast('Thanks!', 'Mood saved for today.');
+        },
+        onError: (e: any) => {
+          // Backend sends a helpful 24h message as 400; show it verbatim.
+          showErrorToast(e?.message || 'Could not save mood.');
+        },
+      },
+    );
   };
 
   const handleStartNow = () => {
@@ -145,6 +224,7 @@ const Home: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['urgent-care-availability'] }),
         queryClient.invalidateQueries({ queryKey: ['patient-subscription'] }),
         queryClient.invalidateQueries({ queryKey: ['patient-me'] }),
+        queryClient.invalidateQueries({ queryKey: ['patient-mood'] }),
       ]);
       // Force active queries used by child components to refetch immediately.
       await queryClient.refetchQueries({
@@ -189,6 +269,10 @@ const Home: React.FC = () => {
           </TouchableOpacity>
         </View>
       ) : null}
+      <GlobalSearchModal
+        visible={globalSearchOpen}
+        onClose={() => setGlobalSearchOpen(false)}
+      />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -211,10 +295,14 @@ const Home: React.FC = () => {
           <HomeHeader
             onProfilePress={handleProfilePress}
             onSearchChange={handleSearchChange}
+            onSearchPress={openGlobalSearch}
+            searchEditable={false}
             onAIChatPress={handleAIChatPress}
             onNotificationPress={handleNotificationPress}
             onFeelingPress={handleFeelingPress}
-            placeholder="Search doctor, service"
+            placeholder="Search doctor, appointment, payments..."
+            showFeelingRow={!moodLocked}
+            moodSummary={moodUi}
           />
         </View>
         <View style={styles.content}>

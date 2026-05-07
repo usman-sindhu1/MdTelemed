@@ -7,6 +7,7 @@ import {
   FlatList,
   Image,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -45,6 +46,7 @@ type PrescriptionNavigationProp = NativeStackNavigationProp<
 const ADVISE_PREVIEW_LEN = 140;
 
 const Prescription: React.FC = () => {
+  const windowHeight = Dimensions.get('window').height;
   const navigation = useNavigation<PrescriptionNavigationProp>();
   const insets = useSafeAreaInsets();
   const { setIsScrollingDown } = useScrollContext();
@@ -69,6 +71,39 @@ const Prescription: React.FC = () => {
     () => listQuery.data?.pages.flatMap((p) => p.items ?? []) ?? [],
     [listQuery.data?.pages],
   );
+
+  const filteredItems = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return items;
+
+    return items.filter((it) => {
+      const appt = it.appointment;
+      const doctorUser = appt?.doctorUser;
+      const doctorName = formatDoctorUserName(doctorUser);
+      const dateLabel = formatPrescriptionListDate(it.createdAt);
+      const serviceLabel = appointmentTypeToLabel(appt?.appointmentType);
+      const forLabel = appt?.appointmentFor?.trim() || '';
+      const title = it.title?.trim() || '';
+      const advise = it.advise?.trim() || '';
+
+      const hay = [
+        title,
+        doctorName,
+        dateLabel,
+        serviceLabel,
+        forLabel,
+        advise,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return hay.includes(q);
+    });
+  }, [debouncedSearch, items]);
+
+  const isSearchEmpty =
+    debouncedSearch.trim().length > 0 && filteredItems.length === 0;
 
   const listPagination = useMemo(() => {
     const pages = listQuery.data?.pages;
@@ -278,11 +313,16 @@ const Prescription: React.FC = () => {
       const msg =
         (listQuery.error as Error)?.message ?? 'Could not load prescriptions.';
       return (
-        <View style={styles.centerBox}>
-          <View style={styles.emptyIconWrap}>
-            <Icons.Report width={30} height={30} />
+        <View
+          style={[
+            styles.emptyCenterWrap,
+            { minHeight: Math.max(windowHeight * 0.5, 340) },
+          ]}
+        >
+          <View style={[styles.emptyIconCircle, styles.emptyIconCircleError]}>
+            <Icons.PageInfoIcon width={44} height={44} fill="#EF4444" />
           </View>
-          <Text style={styles.emptyTitle}>Could not load prescriptions</Text>
+          <Text style={styles.emptyStateTitle}>Could not load prescriptions</Text>
           <Text style={styles.errorText}>{msg}</Text>
           <TouchableOpacity
             style={styles.retryBtn}
@@ -293,13 +333,27 @@ const Prescription: React.FC = () => {
         </View>
       );
     }
-    return (
-      <View style={styles.centerBox}>
-        <View style={styles.emptyIconWrap}>
-          <Icons.Report width={30} height={30} />
+
+    if (isSearchEmpty) {
+      return (
+        <View style={styles.searchEmptyWrap}>
+          <Text style={styles.searchEmptyText}>No prescriptions found.</Text>
         </View>
-        <Text style={styles.emptyTitle}>No prescriptions yet</Text>
-        <Text style={styles.emptySub}>
+      );
+    }
+
+    return (
+      <View
+        style={[
+          styles.emptyCenterWrap,
+          { minHeight: Math.max(windowHeight * 0.5, 340) },
+        ]}
+      >
+        <View style={styles.emptyIconCircle}>
+          <Icons.Report width={44} height={44} fill={Colors.primary} />
+        </View>
+        <Text style={styles.emptyStateTitle}>No prescriptions</Text>
+        <Text style={styles.emptyStateText}>
           When your doctor issues a prescription, it will appear here.
         </Text>
       </View>
@@ -311,14 +365,14 @@ const Prescription: React.FC = () => {
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <FlatList
           style={styles.list}
-          data={items}
+          data={filteredItems}
           keyExtractor={(it) => it.id}
           renderItem={renderCard}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
           ListFooterComponent={
             <ListPaginationFooter
-              loadedCount={items.length}
+              loadedCount={filteredItems.length}
               pagination={listPagination}
               hasNextPage={listQuery.hasNextPage}
               isFetchingNextPage={listQuery.isFetchingNextPage}
@@ -395,20 +449,52 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 20,
   },
-  centerBox: {
-    paddingVertical: 48,
+  emptyCenterWrap: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    alignSelf: 'stretch',
+  },
+  emptyIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#E8EEF9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptyIconCircleError: {
+    backgroundColor: '#FEF2F2',
+  },
+  emptyStateTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 15,
+    fontWeight: '400',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  searchEmptyWrap: {
+    paddingVertical: 18,
     paddingHorizontal: 24,
     alignItems: 'center',
-    gap: 10,
   },
-  emptyIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
+  searchEmptyText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   errorText: {
     fontFamily: Fonts.openSans,
@@ -428,21 +514,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  emptyTitle: {
-    fontFamily: Fonts.raleway,
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySub: {
-    fontFamily: Fonts.openSans,
-    fontSize: 14,
-    color: Colors.textLight,
-    textAlign: 'center',
-    lineHeight: 20,
   },
   prescriptionCard: {
     marginHorizontal: 15,

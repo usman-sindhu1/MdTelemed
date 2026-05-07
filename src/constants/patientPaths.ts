@@ -26,6 +26,7 @@ export const patientPaths = {
     `${PATIENT_API_PREFIX}/payments/${encodeURIComponent(id)}`,
   medicalHistory: `${PATIENT_API_PREFIX}/medical-history`,
   subscription: `${PATIENT_API_PREFIX}/subscription`,
+  mood: `${PATIENT_API_PREFIX}/mood`,
 };
 
 export const filesPaths = {

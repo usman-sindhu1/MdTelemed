@@ -96,7 +96,9 @@ const Notifications: React.FC = () => {
       const matchesTab = activeFilter === 'All' ? true : tab === activeFilter;
       if (!matchesTab) return false;
       if (!q) return true;
-      const hay = `${n.title ?? ''}\n${n.description ?? ''}`.toLowerCase();
+      const dt = n.createdAt ? formatDateTime(n.createdAt) : null;
+      const dateStr = dt ? `${dt.date} ${dt.time}` : '';
+      const hay = `${n.title ?? ''}\n${n.description ?? ''}\n${dateStr}`.toLowerCase();
       return hay.includes(q);
     });
   }, [activeFilter, notificationsQuery.data, search]);
@@ -239,43 +241,52 @@ const Notifications: React.FC = () => {
 
           {/* Notification Cards */}
           <View style={styles.cardsContainer}>
-            {filteredNotifications.map((notification) => (
-              <TouchableOpacity
-                key={notification.id}
-                style={[
-                  styles.notificationCard,
-                  !notification.isRead && styles.unreadCard,
-                ]}
-                onPress={() => handleNotificationPress(notification)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.cardHeader}>
-                  <View style={[styles.typeLabel, getTypeStyle(notification.type)]}>
-                    <Text style={styles.typeText}>
-                      {tabLabelFromType(notification.type)}
-                    </Text>
+            {filteredNotifications.length === 0 ? (
+              <View style={styles.searchEmptyWrap}>
+                <Text style={styles.searchEmptyTitle}>No results</Text>
+                <Text style={styles.searchEmptyText}>
+                  Try searching by title, message, date, or time.
+                </Text>
+              </View>
+            ) : (
+              filteredNotifications.map((notification) => (
+                <TouchableOpacity
+                  key={notification.id}
+                  style={[
+                    styles.notificationCard,
+                    !notification.isRead && styles.unreadCard,
+                  ]}
+                  onPress={() => handleNotificationPress(notification)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={[styles.typeLabel, getTypeStyle(notification.type)]}>
+                      <Text style={styles.typeText}>
+                        {tabLabelFromType(notification.type)}
+                      </Text>
+                    </View>
+                    <View style={styles.dateLabel}>
+                      {(() => {
+                        const dt = formatDateTime(notification.createdAt);
+                        return (
+                          <View style={styles.dateRow}>
+                            {!notification.isRead ? <View style={styles.unreadDot} /> : null}
+                            <Text style={styles.dateText}>
+                              {dt.date} | {dt.time}
+                            </Text>
+                          </View>
+                        );
+                      })()}
+                    </View>
                   </View>
-                  <View style={styles.dateLabel}>
-                    {(() => {
-                      const dt = formatDateTime(notification.createdAt);
-                      return (
-                        <View style={styles.dateRow}>
-                          {!notification.isRead ? <View style={styles.unreadDot} /> : null}
-                          <Text style={styles.dateText}>
-                            {dt.date} | {dt.time}
-                          </Text>
-                        </View>
-                      );
-                    })()}
-                  </View>
-                </View>
 
-                <View style={styles.notificationContent}>
-                  <Text style={styles.notificationTitle}>{notification.title}</Text>
-                  <Text style={styles.notificationMessage}>{notification.description}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.notificationContent}>
+                    <Text style={styles.notificationTitle}>{notification.title}</Text>
+                    <Text style={styles.notificationMessage}>{notification.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
           </View>
         </ScrollView>
@@ -357,6 +368,29 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: 16,
+  },
+  searchEmptyWrap: {
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchEmptyTitle: {
+    fontFamily: Fonts.raleway,
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  searchEmptyText: {
+    fontFamily: Fonts.openSans,
+    fontSize: 14,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 320,
   },
   filterRow: {
     flexDirection: 'row',
